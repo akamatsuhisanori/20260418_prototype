@@ -7,6 +7,10 @@ export default defineNuxtConfig({
 
   modules: ["@nuxtjs/supabase"],
 
+  // Flatten component auto-import so <Step0 /> / <ProgressBar /> work
+  // without the folder-name prefix (StepsStep0 / BaseProgressBar).
+  components: [{ path: "~/components", pathPrefix: false }],
+
   supabase: {
     // @nuxtjs/supabase picks up SUPABASE_URL / SUPABASE_KEY (anon) from env
     redirectOptions: {
