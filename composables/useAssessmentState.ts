@@ -120,8 +120,10 @@ export const useAssessmentState = () => {
   // ---------------------------------------------------------
   // 派生値（元 jsx のロジックを Vue computed に移植）
   // ---------------------------------------------------------
+  // 仕様書 2-4: past / current それぞれ「1件以上」入力されていれば次へ進める。
+  // 以前は .every で全3スロット必須になっていたが、spec に合わせて .some に変更。
   const isOrgComplete = (phase: "past" | "current") =>
-    state.value.orgs[phase].every((o) => o.trim().length > 0);
+    state.value.orgs[phase].some((o) => o.trim().length > 0);
 
   const identityScore = (phase: "past" | "current", orgName: string) => {
     const dims = state.value.dimensions[phase]?.[orgName];
