@@ -1,0 +1,240 @@
+/* ============================================================
+   Re:roots Nuxt — base stylesheet
+   オリジナル reroots.jsx の Tailwind っぽい見た目を
+   小さな素の CSS で再現する
+   （本手順書で pnpm/Tailwind 追加を避ける前提）
+   ============================================================ */
+
+:root {
+  --bg:          #fafaf7;
+  --text:        #0f172a;
+  --text-soft:   #334155;
+  --muted:       #64748b;
+  --border:      #e2e8f0;
+  --border-soft: #f1f5f9;
+  --card:        #ffffff;
+  --card-soft:   #f8fafc;
+
+  --accent:      #0f766e; /* teal-700 */
+  --accent-fg:   #ecfdf5;
+  --warn:        #b45309;
+  --danger:      #b91c1c;
+
+  --affective:   #ef6c66;
+  --relational:  #4a9fbf;
+  --agentic:     #e8a53f;
+  --gray:        #94a3b8;
+
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 16px;
+  --shadow:    0 1px 2px rgba(15, 23, 42, 0.06),
+               0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #__nuxt {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "Noto Sans JP", "Yu Gothic UI", "Meiryo",
+    system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* -------- layout -------- */
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+.page--narrow {
+  max-width: 640px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 28px;
+  margin-bottom: 20px;
+}
+.card h2 { margin-top: 0; }
+
+.card--soft {
+  background: var(--card-soft);
+  border-style: dashed;
+}
+
+.muted  { color: var(--muted); }
+.small  { font-size: 13px; }
+.tiny   { font-size: 12px; }
+.center { text-align: center; }
+
+hr.sep {
+  border: none;
+  border-top: 1px solid var(--border-soft);
+  margin: 24px 0;
+}
+
+/* -------- headings -------- */
+h1, h2, h3 { line-height: 1.3; color: var(--text); }
+h1 { font-size: 28px; margin: 0 0 12px; }
+h2 { font-size: 22px; margin: 0 0 12px; }
+h3 { font-size: 17px; margin: 0 0 8px; }
+
+/* -------- buttons -------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, opacity 0.12s;
+}
+.btn:hover:not(:disabled) { background: var(--card-soft); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.btn--primary:hover:not(:disabled) {
+  background: #115e59;
+}
+
+.btn--ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.btn--danger {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: #fff;
+}
+.btn--danger:hover:not(:disabled) { background: #fef2f2; }
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.btn-row .btn-right {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+
+/* -------- forms -------- */
+label { display: block; font-weight: 600; margin-bottom: 6px; }
+
+.field { margin-bottom: 16px; }
+
+input[type="text"],
+input[type="email"],
+input[type="number"],
+textarea,
+select {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.1s, box-shadow 0.1s;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+textarea { min-height: 96px; resize: vertical; }
+
+/* -------- progress -------- */
+.progress {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+.progress__seg {
+  flex: 1;
+  height: 4px;
+  background: var(--border-soft);
+  border-radius: 999px;
+}
+.progress__seg--active { background: var(--accent); }
+.progress__seg--done   { background: var(--accent); opacity: 0.5; }
+
+/* -------- chip / tag -------- */
+.chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--border-soft);
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.chip--admin    { background: #ecfdf5; color: #065f46; }
+.chip--pending  { background: #fef3c7; color: #92400e; }
+.chip--accepted { background: #dbeafe; color: #1e40af; }
+.chip--revoked  { background: #fee2e2; color: #991b1b; }
+
+/* -------- dimension colors -------- */
+.color-affective  { color: var(--affective); }
+.color-relational { color: var(--relational); }
+.color-agentic    { color: var(--agentic); }
+
+.bg-affective   { background: var(--affective); color: #fff; }
+.bg-relational  { background: var(--relational); color: #fff; }
+.bg-agentic     { background: var(--agentic); color: #fff; }
+
+/* -------- tables -------- */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table th, .table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+  vertical-align: top;
+}
+.table th {
+  background: var(--card-soft);
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+/* -------- utilities -------- */
+.stack > * + * { margin-top: 16px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.row--end { justify-content: flex-end; }
+.grow { flex: 1; }
+
+.hidden { display: none !important; }

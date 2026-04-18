@@ -1,0 +1,31 @@
+# Nuxt
+.nuxt
+.output
+.data
+.vercel
+dist
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Deps
+node_modules
+
+# Editors
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# Supabase local
+.supabase
+supabase/.branches
+supabase/.temp
+
+# Logs
+*.log
+
+# TypeScript
+*.tsbuildinfo
