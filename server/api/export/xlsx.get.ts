@@ -1,12 +1,14 @@
 // ============================================================
 // /api/export/xlsx
-//   4 シート構成（組織データ / 自分らしさの解体 / 3人の対話 / 行動プラン）
-//   の Excel を返す。reroots v2 (jsx) の layout を踏襲。
+//   全回答者の responses.data を 1 シート wide 形式で Excel に書き出す。
+//   仕様書 v1（6 ブロック）に対応。
 // ============================================================
 import * as XLSX from "xlsx";
-import { CONTENT } from "~/content/assessment";
+import { AXIS_KEYS } from "~/content/assessment";
 import { getSupabaseAdmin, requireAdmin } from "~/server/utils/supabase-admin";
-import type { AssessmentState } from "~/types/database.types";
+import type { AssessmentState, Organization } from "~/types/database.types";
+
+const MAX_ORGS = 8;
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event);
@@ -14,129 +16,99 @@ export default defineEventHandler(async (event) => {
 
   const { data: rows, error } = await admin
     .from("responses")
-    .select("label, access_token, data")
+    .select("label, access_token, data, is_submitted, submitted_at, updated_at")
     .eq("is_revoked", false)
     .order("updated_at", { ascending: false });
-
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message });
   }
 
-  const dims = CONTENT.questions.dimensions;
-  const dialogues = CONTENT.questions.dialogue;
+  const header: string[] = [
+    "回答者",
+    "提出状態",
+    "送信日時",
+    "更新日時",
+    ...Array.from({ length: MAX_ORGS }, (_, i) => [
+      `組織${i + 1}_名前`,
+      `組織${i + 1}_区分(過去/現在)`,
+    ]).flat(),
+    ...Array.from({ length: MAX_ORGS }, (_, i) => [
+      ...[1, 2, 3, 4, 5, 6].map((q) => `組織${i + 1}_Q${q}(1-5)`),
+      `組織${i + 1}_平均`,
+    ]).flat(),
+    "重要組織_名前",
+    "重要組織_選定方法",
+    ...AXIS_KEYS.flatMap((k) => [`B4_${k}_詳細`, `B4_${k}_一言`]),
+    "B5_核",
+    ...AXIS_KEYS.flatMap((k) => [`B6_現在_${k}_詳細`, `B6_現在_${k}_一言`]),
+    ...AXIS_KEYS.flatMap((k) => [`B6_未来_${k}_詳細`, `B6_未来_${k}_一言`]),
+    ...AXIS_KEYS.flatMap((k) => [`B6_${k}_ギャップ有無`, `B6_${k}_行動`]),
+  ];
 
-  // ---- Sheet 1: 組織データ ----
-  const orgHeaders = CONTENT.excel.orgHeaders;
-  const orgRows: (string | number)[][] = [orgHeaders as unknown as string[]];
-
-  // ---- Sheet 2: 自分らしさの解体 ----
-  const identityHeaders = CONTENT.excel.identityHeaders;
-  const identityRows: (string | number)[][] = [identityHeaders as unknown as string[]];
-
-  // ---- Sheet 3: 3人の対話 ----
-  const dialogueHeaders = CONTENT.excel.dialogueHeaders;
-  const dialogueRows: (string | number)[][] = [dialogueHeaders as unknown as string[]];
-
-  // ---- Sheet 4: 行動プラン ----
-  const actionHeaders = CONTENT.excel.actionHeaders;
-  const actionRows: (string | number)[][] = [actionHeaders as unknown as string[]];
+  const aoa: (string | number)[][] = [header];
 
   for (const row of rows ?? []) {
     const d = (row.data as AssessmentState) || null;
     const respondent = row.label || `token:${row.access_token.slice(0, 8)}`;
-    if (!d) continue;
 
-    // Sheet 1
-    for (const phase of ["past", "current"] as const) {
-      for (const name of d.orgs[phase].filter(Boolean)) {
-        const dims4 = CONTENT.questions.org; // 帰属感/感情的結びつき/... (org Q)
-        const dm = d.dimensions[phase]?.[name] ?? {};
-        // 人格形成度 = dimensions (affective/relational/agentic) 平均 * 10 = 0-100
-        const formation =
-          (dims.reduce((a, x) => a + (dm[x.id] ?? 0), 0) / (dims.length * 10)) * 100;
-        orgRows.push([
-          respondent,
-          name,
-          phase === "past" ? "過去" : "現在",
-          // org-level Qs are not captured in current UI — leave blank
-          "",
-          "",
-          "",
-          "",
-          Math.round(formation),
-          d.frequencies[phase][name] ?? "",
-        ]);
-      }
+    const cells: (string | number)[] = [
+      respondent,
+      row.is_submitted ? "提出済" : "未提出",
+      row.submitted_at ?? "",
+      row.updated_at ?? "",
+    ];
+
+    if (!d) {
+      while (cells.length < header.length) cells.push("");
+      aoa.push(cells);
+      continue;
     }
 
-    // Sheet 2
-    const targetOrg =
-      d.orgs.past.filter(Boolean)[0] ?? d.orgs.current.filter(Boolean)[0] ?? "";
-    for (const dim of dims) {
-      identityRows.push([
-        respondent,
-        targetOrg,
-        dim.label,
-        dim.rbs,
-        d.dialogue[`step4:${dim.id}:episode`] ?? "",
-        d.dialogue[`step4:${dim.id}:keyword`] ?? "",
-      ]);
+    const orgs = (d.organizations ?? []) as Organization[];
+    for (let i = 0; i < MAX_ORGS; i++) {
+      const o = orgs[i];
+      cells.push(o?.name ?? "");
+      cells.push(o ? (o.tag === "current" ? "現在" : "過去") : "");
+    }
+    for (let i = 0; i < MAX_ORGS; i++) {
+      const o = orgs[i];
+      const arr = o ? d.scores?.[String(o.id)] ?? [] : [];
+      for (let q = 0; q < 6; q++) cells.push(arr[q] ?? "");
+      const filled = arr.filter((v) => v > 0);
+      const avg =
+        filled.length === 0
+          ? ""
+          : Number((filled.reduce((a, b) => a + b, 0) / filled.length).toFixed(2));
+      cells.push(avg);
+    }
+    const sel = orgs.find((o) => o.id === d.selectedOrgId) ?? null;
+    cells.push(sel?.name ?? "");
+    cells.push(d.selectedOrgManual ? "手動" : sel ? "自動" : "");
+    for (const k of AXIS_KEYS) {
+      cells.push(d.block4?.[k]?.detail ?? "");
+      cells.push(d.block4?.[k]?.summary ?? "");
+    }
+    cells.push(d.coreStatement ?? "");
+    for (const k of AXIS_KEYS) {
+      cells.push(d.block6?.current?.[k]?.detail ?? "");
+      cells.push(d.block6?.current?.[k]?.summary ?? "");
+    }
+    for (const k of AXIS_KEYS) {
+      cells.push(d.block6?.future?.[k]?.detail ?? "");
+      cells.push(d.block6?.future?.[k]?.summary ?? "");
+    }
+    for (const k of AXIS_KEYS) {
+      const g = d.block6?.gaps?.[k];
+      cells.push(g?.hasGap == null ? "" : g.hasGap ? "あり" : "なし");
+      cells.push(g?.action ?? "");
     }
 
-    // Sheet 3
-    const selectedDim = d.dialogue["step5:selectedDim"] || dims[0].id;
-    const selectedLabel = dims.find((x) => x.id === selectedDim)?.label ?? selectedDim;
-    for (const q of dialogues) {
-      dialogueRows.push([
-        respondent,
-        selectedLabel,
-        q.label,
-        d.dialogue[`step5:dialogue:${selectedDim}:${q.id}:past`] ?? "",
-        d.dialogue[`step5:dialogue:${selectedDim}:${q.id}:present`] ?? "",
-        d.dialogue[`step5:dialogue:${selectedDim}:${q.id}:future`] ?? "",
-      ]);
-    }
-
-    // Sheet 4
-    actionRows.push([
-      respondent,
-      CONTENT.excel.actionRows.craftExperiments,
-      d.actions.craftExperiments ?? "",
-    ]);
-    actionRows.push([
-      respondent,
-      CONTENT.excel.actionRows.shiftConnections,
-      d.actions.shiftConnections ?? "",
-    ]);
-    actionRows.push([
-      respondent,
-      CONTENT.excel.actionRows.makeSense,
-      d.actions.makeSense ?? "",
-    ]);
-    actionRows.push([respondent, CONTENT.excel.weeklyRowLabel, d.dialogue["step5:week"] ?? ""]);
+    aoa.push(cells);
   }
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.aoa_to_sheet(orgRows),
-    CONTENT.excel.sheets.orgs,
-  );
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.aoa_to_sheet(identityRows),
-    CONTENT.excel.sheets.identity,
-  );
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.aoa_to_sheet(dialogueRows),
-    CONTENT.excel.sheets.dialogue,
-  );
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.aoa_to_sheet(actionRows),
-    CONTENT.excel.sheets.action,
-  );
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  XLSX.utils.book_append_sheet(wb, ws, "回答");
 
   const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
   setResponseHeader(
@@ -147,7 +119,13 @@ export default defineEventHandler(async (event) => {
   setResponseHeader(
     event,
     "Content-Disposition",
-    `attachment; filename="${encodeURIComponent(CONTENT.excel.fileName)}"`,
+    `attachment; filename="reroots_responses_${todayStamp()}.xlsx"`,
   );
   return buf;
 });
+
+function todayStamp(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
+}

@@ -28,6 +28,9 @@ export default defineNuxtConfig({
     adminEmail: "", // set via ADMIN_EMAIL — this account becomes admin on first login
     public: {
       appName: "Re:roots",
+      // 完了画面で誘導する振り返りアンケート（Google フォーム）の URL。
+      // Vercel 側で NUXT_PUBLIC_SURVEY_URL を設定。
+      surveyUrl: "",
     },
   },
 

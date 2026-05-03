@@ -7,8 +7,7 @@ const { submitted, state } = useAssessmentState();
 const hasProgress = computed(
   () =>
     state.value.meta.step > 0 ||
-    state.value.orgs.past.some(Boolean) ||
-    state.value.orgs.current.some(Boolean),
+    state.value.organizations.length > 0,
 );
 </script>
 

@@ -2,10 +2,13 @@
 // /api/export/csv
 //   全回答者の responses.data を wide 形式の CSV にまとめて返す。
 //   admin 専用。Excel で開きやすいよう UTF-8 BOM 付き。
+//   仕様書 v1（6 ブロック）に対応。
 // ============================================================
-import { CONTENT } from "~/content/assessment";
+import { CONTENT, AXIS_KEYS } from "~/content/assessment";
 import { getSupabaseAdmin, requireAdmin } from "~/server/utils/supabase-admin";
-import type { AssessmentState } from "~/types/database.types";
+import type { AssessmentState, Organization } from "~/types/database.types";
+
+const MAX_ORGS = 8; // CONTENT.block1.maxOrgs と同期
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event);
@@ -20,50 +23,46 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: error.message });
   }
 
-  const dims = CONTENT.questions.dimensions;
-  const dialogues = CONTENT.questions.dialogue;
-
   // ---- header ----
   const header: string[] = [
     "回答者",
     "提出状態",
     "送信日時",
     "更新日時",
-    // orgs × 2 phase × 3 slot
-    ...["past", "current"].flatMap((p) =>
-      [1, 2, 3].map((n) => `${p === "past" ? "過去" : "現在"}組織${n}`),
-    ),
-    // identity 3 dim × 2 phase × org1-3
-    ...["past", "current"].flatMap((p) =>
-      [1, 2, 3].flatMap((n) =>
-        dims.map(
-          (d) =>
-            `${p === "past" ? "過去" : "現在"}組織${n}_${d.label}(0-10)`,
-        ),
-      ),
-    ),
-    // frequency × 2 phase × org1-3
-    ...["past", "current"].flatMap((p) =>
-      [1, 2, 3].map(
-        (n) => `${p === "past" ? "過去" : "現在"}組織${n}_関わり頻度(1-5)`,
-      ),
-    ),
-    // dimension keywords & episodes
-    ...dims.flatMap((d) => [
-      `${d.label}_エピソード`,
-      `${d.label}_キーワード`,
+    // ブロック 1: 組織リスト × 8
+    ...Array.from({ length: MAX_ORGS }, (_, i) => [
+      `組織${i + 1}_名前`,
+      `組織${i + 1}_区分(過去/現在)`,
+    ]).flat(),
+    // ブロック 2: 各組織の 6 項目スコア + 平均
+    ...Array.from({ length: MAX_ORGS }, (_, i) => [
+      ...[1, 2, 3, 4, 5, 6].map((q) => `組織${i + 1}_Q${q}(1-5)`),
+      `組織${i + 1}_平均`,
+    ]).flat(),
+    // ブロック 2: 重要組織の確定
+    "重要組織_名前",
+    "重要組織_選定方法",
+    // ブロック 4: 3 軸（Who/Why/What）
+    ...AXIS_KEYS.flatMap((k) => [
+      `B4_${k}_詳細`,
+      `B4_${k}_一言`,
     ]),
-    // dialogue 3x3 (question × tense)
-    ...dialogues.flatMap((q) =>
-      ["past", "present", "future"].map(
-        (t) => `対話_${q.label}_${CONTENT.step5.personShort[t as "past" | "present" | "future"]}`,
-      ),
-    ),
-    // actions
-    "行動_CraftExperiments",
-    "行動_ShiftConnections",
-    "行動_MakeSense",
-    "今週のプラン",
+    // ブロック 5: 核
+    "B5_核",
+    // ブロック 6: 9 マス（現在 / 未来）
+    ...AXIS_KEYS.flatMap((k) => [
+      `B6_現在_${k}_詳細`,
+      `B6_現在_${k}_一言`,
+    ]),
+    ...AXIS_KEYS.flatMap((k) => [
+      `B6_未来_${k}_詳細`,
+      `B6_未来_${k}_一言`,
+    ]),
+    // ブロック 6: ギャップ判定 + 行動
+    ...AXIS_KEYS.flatMap((k) => [
+      `B6_${k}_ギャップ有無`,
+      `B6_${k}_行動`,
+    ]),
   ];
 
   const lines: string[] = [header.map(csvEscape).join(",")];
@@ -80,55 +79,60 @@ export default defineEventHandler(async (event) => {
     ];
 
     if (!d) {
-      // blank row for users who never started
-      const fillCount = header.length - cells.length;
-      for (let i = 0; i < fillCount; i++) cells.push("");
+      while (cells.length < header.length) cells.push("");
       lines.push(cells.map(csvEscape).join(","));
       continue;
     }
 
-    // orgs
-    for (const phase of ["past", "current"] as const) {
-      for (let i = 0; i < 3; i++) cells.push(d.orgs[phase][i] ?? "");
+    const orgs = (d.organizations ?? []) as Organization[];
+    // 組織 1..MAX_ORGS
+    for (let i = 0; i < MAX_ORGS; i++) {
+      const o = orgs[i];
+      cells.push(o?.name ?? "");
+      cells.push(o ? (o.tag === "current" ? "現在" : "過去") : "");
     }
-    // identity dimensions
-    for (const phase of ["past", "current"] as const) {
-      for (let i = 0; i < 3; i++) {
-        const name = d.orgs[phase][i];
-        for (const dim of dims) {
-          cells.push(name ? d.dimensions[phase]?.[name]?.[dim.id] ?? "" : "");
-        }
-      }
+    // 各組織のスコア 1..MAX_ORGS
+    for (let i = 0; i < MAX_ORGS; i++) {
+      const o = orgs[i];
+      const arr = o ? d.scores?.[String(o.id)] ?? [] : [];
+      for (let q = 0; q < 6; q++) cells.push(arr[q] ?? "");
+      // 平均
+      const filled = arr.filter((v) => v > 0);
+      const avg = filled.length === 0 ? "" : (filled.reduce((a, b) => a + b, 0) / filled.length).toFixed(2);
+      cells.push(avg);
     }
-    // frequency
-    for (const phase of ["past", "current"] as const) {
-      for (let i = 0; i < 3; i++) {
-        const name = d.orgs[phase][i];
-        cells.push(name ? d.frequencies[phase][name] ?? "" : "");
-      }
+    // 重要組織
+    const sel = orgs.find((o) => o.id === d.selectedOrgId) ?? null;
+    cells.push(sel?.name ?? "");
+    cells.push(d.selectedOrgManual ? "手動" : sel ? "自動" : "");
+    // ブロック 4
+    for (const k of AXIS_KEYS) {
+      cells.push(d.block4?.[k]?.detail ?? "");
+      cells.push(d.block4?.[k]?.summary ?? "");
     }
-    // dim episodes/keywords
-    for (const dim of dims) {
-      cells.push(d.dialogue[`step4:${dim.id}:episode`] ?? "");
-      cells.push(d.dialogue[`step4:${dim.id}:keyword`] ?? "");
+    // ブロック 5
+    cells.push(d.coreStatement ?? "");
+    // ブロック 6: 現在
+    for (const k of AXIS_KEYS) {
+      cells.push(d.block6?.current?.[k]?.detail ?? "");
+      cells.push(d.block6?.current?.[k]?.summary ?? "");
     }
-    // dialogue
-    const selectedDim = d.dialogue["step5:selectedDim"] || dims[0].id;
-    for (const q of dialogues) {
-      for (const t of ["past", "present", "future"] as const) {
-        cells.push(d.dialogue[`step5:dialogue:${selectedDim}:${q.id}:${t}`] ?? "");
-      }
+    // ブロック 6: 未来
+    for (const k of AXIS_KEYS) {
+      cells.push(d.block6?.future?.[k]?.detail ?? "");
+      cells.push(d.block6?.future?.[k]?.summary ?? "");
     }
-    // actions
-    cells.push(d.actions.craftExperiments ?? "");
-    cells.push(d.actions.shiftConnections ?? "");
-    cells.push(d.actions.makeSense ?? "");
-    cells.push(d.dialogue["step5:week"] ?? "");
+    // ギャップ + 行動
+    for (const k of AXIS_KEYS) {
+      const g = d.block6?.gaps?.[k];
+      cells.push(g?.hasGap == null ? "" : g.hasGap ? "あり" : "なし");
+      cells.push(g?.action ?? "");
+    }
 
     lines.push(cells.map(csvEscape).join(","));
   }
 
-  const body = "\uFEFF" + lines.join("\r\n");
+  const body = "﻿" + lines.join("\r\n");
   setResponseHeader(event, "Content-Type", "text/csv; charset=utf-8");
   setResponseHeader(
     event,

@@ -1,27 +1,33 @@
 // ============================================================
 // useAssessmentState
-//   5 ステップ回答フォームの state を Vue 側で持ち、
-//   /api/respondent/[token] 経由で Supabase へ debounce 保存する composable。
-//
-//   - reactive な state は useState でセッション中にキャッシュ
-//   - data は JSONB 1 列で保存（質問を増減してもスキーマ移行不要）
-//   - 認証はトークン URL のみ（ログイン不要）
-//   - ページが setToken(token) を呼んだ後、子コンポーネントは
-//     引数なしで useAssessmentState() を使える
+//   6 ブロック構成（仕様書 v1）の state を Vue 側で持ち、
+//   /api/respondent/[token] 経由で Supabase へ debounce 保存する。
 // ============================================================
-import { CONTENT } from "~/content/assessment";
-import type { AssessmentState } from "~/types/database.types";
+import type { AssessmentState, Triad, Axis, GapItem } from "~/types/database.types";
 
-const EMPTY_STATE = (): AssessmentState => ({
-  orgs: { past: ["", "", ""], current: ["", "", ""] },
-  frequencies: { past: {}, current: {} },
-  dimensions: { past: {}, current: {} },
-  identityStrength: { past: {}, current: {} },
-  dialogue: {},
-  actions: {
-    craftExperiments: "",
-    shiftConnections: "",
-    makeSense: "",
+const EMPTY_AXIS = (): Axis => ({ detail: "", summary: "" });
+const EMPTY_TRIAD = (): Triad => ({
+  who: EMPTY_AXIS(),
+  why: EMPTY_AXIS(),
+  what: EMPTY_AXIS(),
+});
+const EMPTY_GAP = (): GapItem => ({ hasGap: null, action: "" });
+
+export const EMPTY_STATE = (): AssessmentState => ({
+  organizations: [],
+  scores: {},
+  selectedOrgId: null,
+  selectedOrgManual: false,
+  block4: EMPTY_TRIAD(),
+  coreStatement: "",
+  block6: {
+    current: EMPTY_TRIAD(),
+    future: EMPTY_TRIAD(),
+    gaps: {
+      who: EMPTY_GAP(),
+      why: EMPTY_GAP(),
+      what: EMPTY_GAP(),
+    },
   },
   meta: {
     step: 0,
@@ -29,6 +35,30 @@ const EMPTY_STATE = (): AssessmentState => ({
     updatedAt: new Date(0).toISOString(),
   },
 });
+
+// 古いデータ（プロパティ欠落）を新しい形に補う
+const normalize = (loaded: Partial<AssessmentState> | null | undefined): AssessmentState => {
+  const base = EMPTY_STATE();
+  if (!loaded || typeof loaded !== "object") return base;
+  return {
+    organizations: Array.isArray(loaded.organizations) ? loaded.organizations : [],
+    scores: loaded.scores && typeof loaded.scores === "object" ? loaded.scores : {},
+    selectedOrgId: typeof loaded.selectedOrgId === "number" ? loaded.selectedOrgId : null,
+    selectedOrgManual: !!loaded.selectedOrgManual,
+    block4: { ...base.block4, ...(loaded.block4 ?? {}) },
+    coreStatement: typeof loaded.coreStatement === "string" ? loaded.coreStatement : "",
+    block6: {
+      current: { ...base.block6.current, ...(loaded.block6?.current ?? {}) },
+      future: { ...base.block6.future, ...(loaded.block6?.future ?? {}) },
+      gaps: {
+        who: { ...base.block6.gaps.who, ...(loaded.block6?.gaps?.who ?? {}) },
+        why: { ...base.block6.gaps.why, ...(loaded.block6?.gaps?.why ?? {}) },
+        what: { ...base.block6.gaps.what, ...(loaded.block6?.gaps?.what ?? {}) },
+      },
+    },
+    meta: { ...base.meta, ...(loaded.meta ?? {}) },
+  };
+};
 
 export const useAssessmentToken = () =>
   useState<string>("reroots-active-token", () => "");
@@ -45,7 +75,6 @@ export const useAssessmentState = () => {
 
   const setToken = (token: string) => {
     if (tokenState.value !== token) {
-      // 別トークンに切り替わったらキャッシュをリセット
       state.value = EMPTY_STATE();
       loaded.value = false;
       submitted.value = false;
@@ -55,7 +84,7 @@ export const useAssessmentState = () => {
   };
 
   // ---------------------------------------------------------
-  // load: トークンに紐付く responses 行を取得
+  // load
   // ---------------------------------------------------------
   const load = async () => {
     if (loaded.value) return;
@@ -69,7 +98,7 @@ export const useAssessmentState = () => {
         data: Partial<AssessmentState>;
         is_submitted: boolean;
       }>(`/api/respondent/${encodeURIComponent(tokenState.value)}`);
-      state.value = { ...EMPTY_STATE(), ...(res.data ?? {}) } as AssessmentState;
+      state.value = normalize(res.data);
       submitted.value = res.is_submitted;
     } catch (e: any) {
       if (e?.statusCode === 404) {
@@ -82,7 +111,7 @@ export const useAssessmentState = () => {
   };
 
   // ---------------------------------------------------------
-  // save: debounce 付きで responses.data を更新
+  // save (debounce)
   // ---------------------------------------------------------
   let timer: ReturnType<typeof setTimeout> | null = null;
   const save = () => {
@@ -106,14 +135,13 @@ export const useAssessmentState = () => {
     }, 600);
   };
 
-  // state を変更するたびに呼ぶヘルパ
   const mutate = (fn: (s: AssessmentState) => void) => {
     fn(state.value);
     save();
   };
 
   // ---------------------------------------------------------
-  // submit: is_submitted = true にロック
+  // submit
   // ---------------------------------------------------------
   const submit = async () => {
     if (notFound.value) return false;
@@ -137,37 +165,41 @@ export const useAssessmentState = () => {
   // ---------------------------------------------------------
   // 派生値
   // ---------------------------------------------------------
-  const isOrgComplete = (phase: "past" | "current") =>
-    state.value.orgs[phase].some((o) => o.trim().length > 0);
-
-  const identityScore = (phase: "past" | "current", orgName: string) => {
-    const dims = state.value.dimensions[phase]?.[orgName];
-    if (!dims) return 0;
-    const vals = CONTENT.questions.dimensions.map((d) => dims[d.id] ?? 0);
-    if (vals.some((v) => v === 0)) return 0;
-    return vals.reduce((a, b) => a + b, 0) / vals.length;
+  const orgById = (id: number | null) => {
+    if (id == null) return null;
+    return state.value.organizations.find((o) => o.id === id) ?? null;
   };
 
-  const gapScore = (orgName: string) => {
-    const past = identityScore("past", orgName);
-    const current = identityScore("current", orgName);
-    return current - past;
+  const scoreAverage = (orgId: number) => {
+    const arr = state.value.scores[String(orgId)];
+    if (!arr || arr.length === 0) return 0;
+    const filled = arr.filter((v) => v > 0);
+    if (filled.length === 0) return 0;
+    return filled.reduce((a, b) => a + b, 0) / filled.length;
   };
 
-  const getTopOrg = (phase: "past" | "current") => {
-    const orgs = state.value.orgs[phase].filter(Boolean);
+  const allScoresComplete = (orgId: number) => {
+    const arr = state.value.scores[String(orgId)];
+    if (!arr) return false;
+    return arr.length === 6 && arr.every((v) => v >= 1 && v <= 5);
+  };
+
+  const topOrgByTag = (tag: "past" | "current") => {
+    const orgs = state.value.organizations.filter((o) => o.tag === tag);
     if (orgs.length === 0) return null;
-    let top = orgs[0];
-    let max = identityScore(phase, top);
+    let best = orgs[0];
+    let bestScore = scoreAverage(best.id);
     for (const o of orgs.slice(1)) {
-      const s = identityScore(phase, o);
-      if (s > max) {
-        max = s;
-        top = o;
+      const s = scoreAverage(o.id);
+      if (s > bestScore) {
+        best = o;
+        bestScore = s;
       }
     }
-    return top;
+    return best;
   };
+
+  const importantOrg = computed(() => orgById(state.value.selectedOrgId));
 
   return {
     state,
@@ -180,9 +212,11 @@ export const useAssessmentState = () => {
     save,
     mutate,
     submit,
-    isOrgComplete,
-    identityScore,
-    gapScore,
-    getTopOrg,
+    // derived
+    orgById,
+    scoreAverage,
+    allScoresComplete,
+    topOrgByTag,
+    importantOrg,
   };
 };

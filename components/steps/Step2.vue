@@ -1,195 +1,317 @@
 <script setup lang="ts">
+// ============================================================
+// ブロック 2：同一化スコア測定 → 比較 → 重要組織の確定
+//   subStep:
+//     0: 各組織への 6 項目スコア入力
+//     1: 比較表示
+//     2: 重要組織の確定（auto / manual 切替）
+// ============================================================
 import { CONTENT } from "~/content/assessment";
 
 const emit = defineEmits<{ (e: "back"): void; (e: "next"): void }>();
+const { state, mutate, scoreAverage, allScoresComplete, topOrgByTag } =
+  useAssessmentState();
 
-const { state, mutate } = useAssessmentState();
+const subStep = computed({
+  get: () => state.value.meta.subStep,
+  set: (v: number) =>
+    mutate((s) => {
+      s.meta.subStep = v;
+    }),
+});
 
-const orgList = computed(() => [
-  ...state.value.orgs.past
-    .filter(Boolean)
-    .map((name) => ({ phase: "past" as const, name })),
-  ...state.value.orgs.current
-    .filter(Boolean)
-    .map((name) => ({ phase: "current" as const, name })),
-]);
-
-const index = useState<number>("reroots-step2-index", () => 0);
-const current = computed(() => orgList.value[index.value]);
-
-const getDimValue = (dimKey: string) =>
-  current.value &&
-  state.value.dimensions[current.value.phase]?.[current.value.name]?.[dimKey] || 0;
-
-const setDim = (dimKey: string, value: number) => {
-  if (!current.value) return;
-  mutate((s) => {
-    const phaseMap = s.dimensions[current.value!.phase];
-    if (!phaseMap[current.value!.name]) phaseMap[current.value!.name] = {};
-    phaseMap[current.value!.name][dimKey] = value;
-  });
-};
-
-const getIdentityValue = (qKey: string) =>
-  current.value &&
-  state.value.identityStrength[current.value.phase]?.[current.value.name]?.[qKey] || 0;
-
-const setIdentity = (qKey: string, value: number) => {
-  if (!current.value) return;
-  mutate((s) => {
-    const phaseMap = s.identityStrength[current.value!.phase];
-    if (!phaseMap[current.value!.name]) phaseMap[current.value!.name] = {};
-    phaseMap[current.value!.name][qKey] = value;
-  });
-};
-
-// 質問文の「現組織名」を、現在表示している組織名に置換する。
-const identityQuestionText = (template: string) =>
-  current.value ? template.replaceAll("現組織名", current.value.name) : template;
-
-const freqValue = computed(() =>
-  current.value
-    ? state.value.frequencies[current.value.phase][current.value.name] || 0
-    : 0,
+// 入力対象の組織（名前があるもののみ、過去→現在の順）
+const orgList = computed(() =>
+  state.value.organizations.filter((o) => o.name.trim().length > 0),
 );
-const setFreq = (value: number) => {
-  if (!current.value) return;
+
+const orgIndex = useState<number>("reroots-block2-index", () => 0);
+const currentOrg = computed(() => orgList.value[orgIndex.value]);
+
+// 質問は 6 項目。past/current でテンプレートが違う。
+const questions = computed(() => {
+  if (!currentOrg.value) return [] as string[];
+  const tmpl =
+    currentOrg.value.tag === "past"
+      ? CONTENT.block2.questionsPast
+      : CONTENT.block2.questionsCurrent;
+  return tmpl.map((t) => t.replaceAll("[組織名]", currentOrg.value!.name));
+});
+const scaleLabels = computed(() =>
+  currentOrg.value?.tag === "past"
+    ? CONTENT.block2.scaleLabelsPast
+    : CONTENT.block2.scaleLabelsCurrent,
+);
+const instruction = computed(() => {
+  if (!currentOrg.value) return "";
+  const tmpl =
+    currentOrg.value.tag === "past"
+      ? CONTENT.block2.instructionPast
+      : CONTENT.block2.instructionCurrent;
+  return tmpl.replace("[組織名]", currentOrg.value.name);
+});
+
+// 現在組織の現在のスコア配列（length 6, 未回答=0）
+const currentScores = computed(() => {
+  const o = currentOrg.value;
+  if (!o) return [0, 0, 0, 0, 0, 0];
+  return state.value.scores[String(o.id)] ?? [0, 0, 0, 0, 0, 0];
+});
+
+const setScore = (qIndex: number, value: number) => {
+  const o = currentOrg.value;
+  if (!o) return;
   mutate((s) => {
-    s.frequencies[current.value!.phase][current.value!.name] = value;
+    const key = String(o.id);
+    const arr = s.scores[key]?.slice() ?? [0, 0, 0, 0, 0, 0];
+    while (arr.length < 6) arr.push(0);
+    arr[qIndex] = value;
+    s.scores[key] = arr;
   });
 };
 
-const orgComplete = (o: { phase: "past" | "current"; name: string }) => {
-  const dims = state.value.dimensions[o.phase]?.[o.name];
-  if (!dims) return false;
-  if (CONTENT.questions.dimensions.some((d) => !dims[d.id])) return false;
-  const ident = state.value.identityStrength[o.phase]?.[o.name];
-  if (!ident) return false;
-  if (CONTENT.questions.identityStrength.some((q) => !ident[q.id])) return false;
-  if (!state.value.frequencies[o.phase][o.name]) return false;
-  return true;
+const currentOrgComplete = computed(() =>
+  currentOrg.value ? allScoresComplete(currentOrg.value.id) : false,
+);
+
+const allOrgsComplete = computed(() =>
+  orgList.value.every((o) => allScoresComplete(o.id)),
+);
+
+const goPrevOrg = () => {
+  if (orgIndex.value > 0) orgIndex.value -= 1;
+  else emit("back");
 };
-
-const allComplete = computed(() => orgList.value.every(orgComplete));
-
-const next = () => {
-  if (index.value < orgList.value.length - 1) {
-    index.value += 1;
-  } else {
-    emit("next");
+const goNextOrg = () => {
+  if (orgIndex.value < orgList.value.length - 1) {
+    orgIndex.value += 1;
+  } else if (allOrgsComplete.value) {
+    subStep.value = 1;
+    orgIndex.value = 0;
   }
 };
-const back = () => {
-  if (index.value > 0) {
-    index.value -= 1;
-  } else {
-    emit("back");
+
+// ----------------- 2-2 比較 -----------------
+const topPast = computed(() => topOrgByTag("past"));
+const topCurrent = computed(() => topOrgByTag("current"));
+const pastScore = computed(() =>
+  topPast.value ? scoreAverage(topPast.value.id) : null,
+);
+const currentScore = computed(() =>
+  topCurrent.value ? scoreAverage(topCurrent.value.id) : null,
+);
+const scoreGap = computed(() => {
+  if (pastScore.value == null || currentScore.value == null) return null;
+  return Math.abs(pastScore.value - currentScore.value);
+});
+
+// ----------------- 2-3 確定 -----------------
+const autoSelected = computed(() => {
+  // 過去組織の最高スコアがあればそれ。無ければ現在組織の最高スコア。
+  return topPast.value ?? topCurrent.value ?? null;
+});
+
+// 確定ステップに入った瞬間、既に selectedOrgId があれば尊重。
+// 無ければ auto を初期値として書き込む。
+const ensureAutoSelected = () => {
+  if (state.value.selectedOrgId == null && autoSelected.value) {
+    mutate((s) => {
+      s.selectedOrgId = autoSelected.value!.id;
+      s.selectedOrgManual = false;
+    });
   }
+};
+
+watch(subStep, (v) => {
+  if (v === 2) ensureAutoSelected();
+});
+
+const selectedOrg = computed(() =>
+  state.value.organizations.find(
+    (o) => o.id === state.value.selectedOrgId,
+  ) ?? null,
+);
+
+const manualMode = ref(false);
+
+const confirmYes = () => {
+  ensureAutoSelected();
+  mutate((s) => {
+    s.selectedOrgManual = false;
+  });
+  emit("next");
+};
+
+const pickManual = (id: number) => {
+  mutate((s) => {
+    s.selectedOrgId = id;
+    s.selectedOrgManual = true;
+  });
+  manualMode.value = false;
+  emit("next");
 };
 </script>
 
 <template>
   <AppCard>
-    <h2>{{ CONTENT.step2.title }}</h2>
-    <p class="muted">{{ CONTENT.step2.description }}</p>
+    <h2>{{ CONTENT.block2.title }}</h2>
 
-    <div v-if="current" class="stack" style="margin-top: 24px">
-      <div class="row">
-        <span class="chip" :class="current.phase === 'current' ? 'chip--accepted' : ''">
-          {{ current.phase === "current" ? CONTENT.step1.currentBadge : CONTENT.step1.pastBadge }}
-        </span>
-        <strong>{{ current.name }}</strong>
-        <span class="small muted" style="margin-left: auto">
-          {{ index + 1 }} / {{ orgList.length }}
-        </span>
+    <!-- ============ subStep 0: 測定 ============ -->
+    <template v-if="subStep === 0">
+      <p class="muted">{{ CONTENT.block2.description }}</p>
+
+      <div v-if="!currentOrg" class="muted small">
+        ブロック 1 で組織を入力してください。
       </div>
 
-      <div v-for="dim in CONTENT.questions.dimensions" :key="dim.id" class="field">
-        <label>
-          {{ dim.icon }} {{ dim.label }}
-          <span class="small muted">（{{ dim.rbs }}）</span>
-        </label>
-        <p class="small muted" style="margin: 4px 0 8px">{{ dim.question }}</p>
+      <div v-else class="stack" style="margin-top: 16px">
         <div class="row">
-          <span class="tiny muted">{{ CONTENT.step2.rangeLow }}</span>
-          <input
-            type="range"
-            min="0"
-            max="10"
-            step="1"
-            :value="getDimValue(dim.id)"
-            @input="setDim(dim.id, Number(($event.target as HTMLInputElement).value))"
-            style="flex: 1"
-          />
-          <span class="tiny muted">{{ CONTENT.step2.rangeHigh }}</span>
-          <span style="width: 24px; text-align: right">
-            <strong>{{ getDimValue(dim.id) }}</strong>
+          <span class="chip" :class="currentOrg.tag === 'current' ? 'chip--accepted' : ''">
+            {{ currentOrg.tag === "current" ? CONTENT.block1.currentLabel : CONTENT.block1.pastLabel }}
+          </span>
+          <strong>{{ currentOrg.name }}</strong>
+          <span class="small muted" style="margin-left: auto">
+            {{ CONTENT.block2.progressLabel(orgIndex + 1, orgList.length) }}
           </span>
         </div>
-      </div>
 
-      <div class="field">
-        <label>{{ CONTENT.step2.identityStrengthLabel }}</label>
-        <p class="small muted" style="margin: 4px 0 8px">
-          {{ CONTENT.step2.identityStrengthDesc }}
-        </p>
+        <p class="small muted">{{ instruction }}</p>
+
         <div
-          v-for="q in CONTENT.questions.identityStrength"
-          :key="q.id"
-          class="stack"
-          style="gap: 4px; margin-bottom: 12px"
+          v-for="(q, i) in questions"
+          :key="i"
+          class="card card--soft"
+          style="padding: 16px"
         >
-          <p style="margin: 0">{{ identityQuestionText(q.text) }}</p>
-          <div class="row">
-            <span class="tiny muted">{{ CONTENT.step2.identityStrengthLow }}</span>
-            <input
-              type="range"
-              min="0"
-              max="7"
-              step="1"
-              :value="getIdentityValue(q.id)"
-              @input="setIdentity(q.id, Number(($event.target as HTMLInputElement).value))"
-              style="flex: 1"
-            />
-            <span class="tiny muted">{{ CONTENT.step2.identityStrengthHigh }}</span>
-            <span style="width: 24px; text-align: right">
-              <strong>{{ getIdentityValue(q.id) || "—" }}</strong>
-            </span>
+          <p style="margin: 0 0 8px"><strong>質問 {{ i + 1 }}</strong>：{{ q }}</p>
+          <div class="stack" style="gap: 4px">
+            <label
+              v-for="(label, v) in scaleLabels"
+              :key="v"
+              class="row"
+              style="gap: 6px; font-weight: 400"
+            >
+              <input
+                type="radio"
+                :name="`q-${currentOrg.id}-${i}`"
+                :checked="currentScores[i] === v + 1"
+                @change="setScore(i, v + 1)"
+              />
+              <span class="small">{{ label }}</span>
+            </label>
           </div>
         </div>
       </div>
 
-      <div class="field">
-        <label>{{ CONTENT.step2.frequencyLabel }}</label>
-        <p class="small muted" style="margin: 4px 0 8px">
-          {{ CONTENT.step2.frequencyDesc }}
-        </p>
-        <div class="row">
-          <label
-            v-for="opt in CONTENT.questions.frequency"
-            :key="opt.value"
-            class="row"
-            style="gap: 4px; font-weight: 400"
-          >
-            <input
-              type="radio"
-              :checked="freqValue === opt.value"
-              @change="setFreq(opt.value)"
-            />
-            <span>{{ opt.label }}</span>
-          </label>
-        </div>
-      </div>
-    </div>
+      <NavButtons
+        can-back
+        can-next
+        :next-disabled="!currentOrgComplete"
+        :back-label="orgIndex === 0 ? CONTENT.nav.back : CONTENT.block2.prevOrg"
+        :next-label="
+          orgIndex === orgList.length - 1
+            ? CONTENT.block2.finishMeasurement
+            : CONTENT.block2.nextOrg
+        "
+        @back="goPrevOrg"
+        @next="goNextOrg"
+      />
+    </template>
 
-    <NavButtons
-      can-back
-      can-next
-      :next-disabled="!allComplete && index === orgList.length - 1"
-      :back-label="index === 0 ? CONTENT.nav.back : CONTENT.step2.prevOrg"
-      :next-label="index === orgList.length - 1 ? CONTENT.step2.nextLabel : CONTENT.step2.nextOrg"
-      @back="back"
-      @next="next"
-    />
+    <!-- ============ subStep 1: 比較 ============ -->
+    <template v-else-if="subStep === 1">
+      <h3>{{ CONTENT.block2.comparisonTitle }}</h3>
+
+      <div class="stack" style="margin-top: 16px">
+        <div class="card card--soft">
+          <div class="small muted">{{ CONTENT.block2.comparisonPastTitle }}</div>
+          <template v-if="topPast">
+            <div style="font-size: 18px"><strong>{{ topPast.name }}</strong></div>
+            <div>
+              {{ CONTENT.block2.comparisonScoreLabel }}：
+              <strong>{{ pastScore!.toFixed(2) }}</strong> / 5
+            </div>
+          </template>
+          <template v-else>
+            <div class="muted">{{ CONTENT.block2.comparisonNoPast }}</div>
+          </template>
+        </div>
+
+        <div class="card card--soft">
+          <div class="small muted">{{ CONTENT.block2.comparisonCurrentTitle }}</div>
+          <template v-if="topCurrent">
+            <div style="font-size: 18px"><strong>{{ topCurrent.name }}</strong></div>
+            <div>
+              {{ CONTENT.block2.comparisonScoreLabel }}：
+              <strong>{{ currentScore!.toFixed(2) }}</strong> / 5
+            </div>
+          </template>
+          <template v-else>
+            <div class="muted">{{ CONTENT.block2.comparisonNoCurrent }}</div>
+          </template>
+        </div>
+
+        <p v-if="scoreGap != null">
+          {{ CONTENT.block2.comparisonGapLabel }}<strong>{{ scoreGap.toFixed(2) }}</strong>
+        </p>
+      </div>
+
+      <NavButtons
+        can-back
+        can-next
+        @back="subStep = 0"
+        @next="subStep = 2"
+      />
+    </template>
+
+    <!-- ============ subStep 2: 確定 ============ -->
+    <template v-else>
+      <template v-if="!manualMode">
+        <p>
+          {{ CONTENT.block2.confirmIntroPre }}<strong>{{ selectedOrg?.name ?? autoSelected?.name }}</strong>{{ CONTENT.block2.confirmIntroPost }}
+        </p>
+        <p>
+          {{ CONTENT.block2.confirmBody(selectedOrg?.name ?? autoSelected?.name ?? "") }}
+        </p>
+        <p style="margin-top: 16px">
+          <strong>{{ CONTENT.block2.confirmQuestion(selectedOrg?.name ?? autoSelected?.name ?? "") }}</strong>
+        </p>
+
+        <div class="stack" style="margin-top: 12px">
+          <button type="button" class="btn btn--primary" @click="confirmYes">
+            {{ CONTENT.block2.confirmYes }}
+          </button>
+          <button type="button" class="btn" @click="manualMode = true">
+            {{ CONTENT.block2.confirmManual }}
+          </button>
+        </div>
+
+        <NavButtons can-back @back="subStep = 1" />
+      </template>
+
+      <template v-else>
+        <h3>{{ CONTENT.block2.manualSelectTitle }}</h3>
+        <p class="small muted">{{ CONTENT.block2.manualSelectDescription }}</p>
+        <div class="stack" style="margin-top: 12px">
+          <button
+            v-for="o in orgList"
+            :key="o.id"
+            type="button"
+            class="card card--soft"
+            style="text-align: left; cursor: pointer"
+            @click="pickManual(o.id)"
+          >
+            <span class="chip" :class="o.tag === 'current' ? 'chip--accepted' : ''">
+              {{ o.tag === "current" ? CONTENT.block1.currentLabel : CONTENT.block1.pastLabel }}
+            </span>
+            <strong style="margin-left: 8px">{{ o.name }}</strong>
+            <span class="small muted" style="margin-left: 8px">
+              （スコア {{ scoreAverage(o.id).toFixed(2) }}）
+            </span>
+          </button>
+        </div>
+        <NavButtons can-back @back="manualMode = false" />
+      </template>
+    </template>
   </AppCard>
 </template>

@@ -1,96 +1,82 @@
 <script setup lang="ts">
-import { CONTENT } from "~/content/assessment";
+// ============================================================
+// ブロック 4：写真を見ながら 3 軸（Who / Why / What）で書き出す
+//   - 各軸：詳細記述（最大 400 字）+ 一言表現（最大 30 字、必須）
+//   - 一言表現がすべて入力されたら次へ進める
+// ============================================================
+import { CONTENT, AXIS_KEYS, type AxisKey } from "~/content/assessment";
 
 const emit = defineEmits<{ (e: "back"): void; (e: "next"): void }>();
-const { state, mutate, getTopOrg } = useAssessmentState();
+const { state, mutate } = useAssessmentState();
 
-const orgName = computed(() => getTopOrg("past") || CONTENT.step4.orgNameFallback);
-
-const keyFor = (dimId: string, kind: "episode" | "keyword") =>
-  `step4:${dimId}:${kind}`;
-
-const getDialogue = (dimId: string, kind: "episode" | "keyword") =>
-  state.value.dialogue[keyFor(dimId, kind)] ?? "";
-
-const setDialogue = (dimId: string, kind: "episode" | "keyword", v: string) => {
+const setDetail = (key: AxisKey, v: string) =>
   mutate((s) => {
-    s.dialogue[keyFor(dimId, kind)] = v;
+    s.block4[key].detail = v.slice(0, CONTENT.block4.detailMaxLength);
   });
-};
+const setSummary = (key: AxisKey, v: string) =>
+  mutate((s) => {
+    s.block4[key].summary = v.slice(0, CONTENT.block4.summaryMaxLength);
+  });
 
-const allKeywordsFilled = computed(() =>
-  CONTENT.questions.dimensions.every(
-    (d) => getDialogue(d.id, "keyword").trim().length > 0,
-  ),
+const allSummariesFilled = computed(() =>
+  AXIS_KEYS.every((k) => state.value.block4[k].summary.trim().length > 0),
 );
 </script>
 
 <template>
   <AppCard>
-    <h2>{{ CONTENT.step4.title }}</h2>
-    <p>
-      {{ CONTENT.step4.introA }}<strong>{{ orgName }}</strong>{{ CONTENT.step4.introB }}
-    </p>
-    <p class="muted">{{ CONTENT.step4.introC }}</p>
+    <h2>{{ CONTENT.block4.title }}</h2>
+    <p class="muted">{{ CONTENT.block4.introduction }}</p>
 
     <div
-      v-for="dim in CONTENT.questions.dimensions"
-      :key="dim.id"
+      v-for="key in AXIS_KEYS"
+      :key="key"
       class="card card--soft"
       style="margin-top: 16px"
     >
-      <h3>
-        <span :class="`color-${dim.id}`">{{ dim.icon }}</span>
-        {{ dim.label }}
-        <span class="small muted">（{{ dim.rbs }}）</span>
-      </h3>
-      <p class="small muted">{{ dim.rbsDesc }}</p>
-      <p>
-        {{ CONTENT.step4.keywordPromptBefore }}{{ orgName
-        }}{{ CONTENT.step4.keywordPromptAfter }}{{ dim.question }}
-      </p>
-      <p class="small muted">{{ dim.hint }}</p>
+      <h3>{{ CONTENT.block4.axes[key].label }}</h3>
+      <p>{{ CONTENT.block4.axes[key].question }}</p>
 
       <textarea
-        :value="getDialogue(dim.id, 'episode')"
-        :placeholder="CONTENT.step4.episodePlaceholder"
-        @input="setDialogue(dim.id, 'episode', ($event.target as HTMLTextAreaElement).value)"
+        :value="state.block4[key].detail"
+        :placeholder="CONTENT.block4.detailPlaceholder"
+        :maxlength="CONTENT.block4.detailMaxLength"
+        @input="setDetail(key, ($event.target as HTMLTextAreaElement).value)"
       />
-
-      <p class="small muted" style="margin-top: 12px">
-        {{ CONTENT.step4.keywordCta }}
+      <p class="tiny muted">
+        {{ state.block4[key].detail.length }} / {{ CONTENT.block4.detailMaxLength }} 字
+        {{ CONTENT.block4.detailHint }}
       </p>
-      <p class="small muted">{{ dim.keywordHint }}</p>
+
+      <p class="small" style="margin-top: 12px">
+        <strong>{{ CONTENT.block4.summaryCta }}</strong>
+      </p>
+      <p class="small muted">{{ CONTENT.block4.axes[key].examples }}</p>
       <input
         type="text"
-        :value="getDialogue(dim.id, 'keyword')"
-        :placeholder="CONTENT.step4.keywordPlaceholder"
-        @input="setDialogue(dim.id, 'keyword', ($event.target as HTMLInputElement).value)"
+        :value="state.block4[key].summary"
+        :placeholder="CONTENT.block4.summaryPlaceholder"
+        :maxlength="CONTENT.block4.summaryMaxLength"
+        @input="setSummary(key, ($event.target as HTMLInputElement).value)"
       />
+      <p class="tiny muted">
+        {{ state.block4[key].summary.length }} / {{ CONTENT.block4.summaryMaxLength }} 字
+      </p>
     </div>
 
-    <div v-if="allKeywordsFilled" class="card" style="margin-top: 20px">
-      <h3>{{ CONTENT.step4.cardTitle }}</h3>
-      <p>
-        {{ CONTENT.step4.cardSubA }}{{ orgName }}{{ CONTENT.step4.cardSubB }}
-      </p>
-      <ul>
-        <li
-          v-for="dim in CONTENT.questions.dimensions"
-          :key="dim.id"
-        >
-          <strong :class="`color-${dim.id}`">{{ dim.icon }} {{ getDialogue(dim.id, "keyword") }}</strong>
-        </li>
-      </ul>
-      <p class="small muted">{{ CONTENT.step4.cardFooter1 }}</p>
-      <p class="small muted">{{ CONTENT.step4.cardFooter2 }}</p>
-    </div>
+    <p
+      v-if="!allSummariesFilled"
+      class="small"
+      style="color: var(--warn); margin-top: 16px"
+    >
+      {{ CONTENT.block4.summaryRequiredWarning }}
+    </p>
 
     <NavButtons
       can-back
       can-next
-      :next-disabled="!allKeywordsFilled"
-      :next-label="CONTENT.step4.nextLabel"
+      :next-disabled="!allSummariesFilled"
+      :next-label="CONTENT.block4.nextLabel"
       @back="emit('back')"
       @next="emit('next')"
     />

@@ -2,7 +2,7 @@
 // ============================================================
 // /assessment/[token]
 //   トークン付き URL でアクセスできる回答画面（ログイン不要）。
-//   トークンが不正/失効していると 404 風メッセージを表示。
+//   step 0 = イントロ, 1..6 = ブロック, 7 = 完了画面。
 // ============================================================
 import { CONTENT } from "~/content/assessment";
 
@@ -27,21 +27,28 @@ setToken(token.value);
 await load();
 
 // アクセスのたびに開始画面 (Step 0) に戻す。
-// 直接代入なので DB には書き込まず、ユーザーが「開始」を押した時点で保存される。
+// 既に提出済みの場合は完了画面 (Step 7) を表示。
 if (!notFound.value) {
-  state.value.meta.step = 0;
+  if (submitted.value) {
+    state.value.meta.step = 7;
+  } else {
+    state.value.meta.step = 0;
+  }
 }
 
 const step = computed({
   get: () => state.value.meta.step,
-  set: (v: number) =>
+  set: (v: number) => {
     mutate((s) => {
       s.meta.step = v;
-    }),
+      // ブロックを跨ぐときは subStep をリセット
+      s.meta.subStep = 0;
+    });
+  },
 });
 
 const goTo = (n: number) => {
-  step.value = Math.max(0, Math.min(5, n));
+  step.value = Math.max(0, Math.min(7, n));
 };
 </script>
 
@@ -66,7 +73,7 @@ const goTo = (n: number) => {
       </header>
 
       <ProgressBar
-        v-if="step > 0"
+        v-if="step >= 1 && step <= 6"
         :total="CONTENT.nav.progressLabels.length"
         :current="step - 1"
       />
@@ -76,7 +83,9 @@ const goTo = (n: number) => {
       <Step2 v-else-if="step === 2" @back="goTo(1)" @next="goTo(3)" />
       <Step3 v-else-if="step === 3" @back="goTo(2)" @next="goTo(4)" />
       <Step4 v-else-if="step === 4" @back="goTo(3)" @next="goTo(5)" />
-      <Step5 v-else @back="goTo(4)" @next="goTo(5)" />
+      <Step5 v-else-if="step === 5" @back="goTo(4)" @next="goTo(6)" />
+      <Step6 v-else-if="step === 6" @back="goTo(5)" @next="goTo(7)" />
+      <StepDone v-else />
     </template>
   </div>
 </template>

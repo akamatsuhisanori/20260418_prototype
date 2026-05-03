@@ -1,12 +1,9 @@
 // ============================================================
 // Supabase Database 型定義
 // ------------------------------------------------------------
-// このファイルは Supabase CLI で自動生成できます:
-//   npm run types:gen
-// （実体は `supabase gen types typescript --project-id "$SUPABASE_PROJECT_ID"`）
-//
-// まだ gen していない間のプレースホルダとして、
-// 本プロジェクトで実際に使う最小限の型を手書きしています。
+// 仕様書 v1 に基づく 6 ブロック構成の AssessmentState を表現する。
+// `responses.data` は jsonb で柔軟に保存するため、ここで定義した型は
+// あくまで TypeScript 側の補助。
 // ============================================================
 
 export type Role = "admin" | "respondent";
@@ -41,43 +38,73 @@ export interface ResponseRow {
 }
 
 // ------------------------------------------------------------
-// `responses.data` の JSONB 中身。UI 側の state と一致させる。
-// ここは質問を増減するたびにキーを足すのではなく、
-// 「自由入力できる dict」として緩めに持っておく。
+// 新仕様 AssessmentState（仕様書 v1）
 // ------------------------------------------------------------
+
+// ブロック 1: 所属組織のリスト
+export interface Organization {
+  id: number;
+  name: string;
+  tag: "past" | "current";
+}
+
+// 詳細記述 + 一言表現
+export interface Axis {
+  detail: string;
+  summary: string;
+}
+
+export interface Triad {
+  who: Axis;
+  why: Axis;
+  what: Axis;
+}
+
+// ブロック 6 のギャップ判定
+export interface GapItem {
+  hasGap: boolean | null; // null = 未回答
+  action: string;
+}
+
 export interface AssessmentState {
-  orgs: {
-    past: string[]; // 長さ 3
-    current: string[]; // 長さ 3
+  // ---------- ブロック 1 ----------
+  organizations: Organization[];
+
+  // ---------- ブロック 2 ----------
+  // scores: orgId → 6 項目の 1-5 評価。0 は未回答扱い
+  scores: Record<string, number[]>;
+  // 重要組織として確定された orgId
+  selectedOrgId: number | null;
+  // false = 自動選定、true = ユーザが手動で選び直した
+  selectedOrgManual: boolean;
+
+  // ---------- ブロック 4 ----------
+  block4: Triad;
+
+  // ---------- ブロック 5 ----------
+  coreStatement: string;
+
+  // ---------- ブロック 6 ----------
+  block6: {
+    current: Triad;
+    future: Triad;
+    gaps: {
+      who: GapItem;
+      why: GapItem;
+      what: GapItem;
+    };
   };
-  frequencies: {
-    past: Record<string, number>;
-    current: Record<string, number>;
-  };
-  dimensions: {
-    past: Record<string, Record<string, number>>;
-    current: Record<string, Record<string, number>>;
-  };
-  identityStrength: {
-    past: Record<string, Record<string, number>>;
-    current: Record<string, Record<string, number>>;
-  };
-  dialogue: Record<string, string>;
-  actions: {
-    craftExperiments: string;
-    shiftConnections: string;
-    makeSense: string;
-  };
+
+  // ---------- 進捗 ----------
   meta: {
-    step: number;
-    subStep: number;
+    step: number; // 0 = イントロ, 1..6 = 各ブロック, 7 = 完了画面
+    subStep: number; // 各ブロック内の小ステップ
     updatedAt: string;
   };
 }
 
 // ------------------------------------------------------------
 // Supabase JS client 用の Database 型
-// （自動生成後はこのブロックを差し替え）
 // ------------------------------------------------------------
 export type Database = {
   public: {

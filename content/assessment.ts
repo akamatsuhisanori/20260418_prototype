@@ -1,329 +1,356 @@
 // ============================================================
-// Re:roots アセスメント定義
-// ============================================================
-//
-// 【編集ガイド】
-// 質問文・選択肢・ボタンラベル・説明文などは全てここに集約。
-// ロジック（スコア計算・バブル配置）は utils/assessment.ts 側。
-//
-// 例：「帰属感の質問文を変えて」→ CONTENT.questions.org[0].desc
-// 例：「新しい次元を追加して」  → CONTENT.questions.dimensions に追加
-// 例：「Excel のシート名を変えて」→ CONTENT.excel.sheets
+// Re:roots アセスメント定義（仕様書 v1）
+// ------------------------------------------------------------
+// 文言・選択肢・ボタンラベルなどを集約。ロジックは UI 側。
 // ============================================================
 
-export type OrgQuestion = { id: string; label: string; desc: string };
-export type IdentityQuestion = { id: string; text: string };
-export type FrequencyOption = { value: number; label: string };
-export type Dimension = {
-  id: string;
-  icon: string;
-  label: string;
-  rbs: string;
-  rbsDesc: string;
-  question: string;
-  hint: string;
-  keywordHint: string;
-};
-export type DialogueQuestion = {
-  id: string;
-  label: string;
-  past: string;
-  present: string;
-  future: string;
-  strategy: string;
-  strategyKey: "craftExperiments" | "shiftConnections" | "makeSense";
-};
+export type AxisKey = "who" | "why" | "what";
+
+export const AXIS_KEYS: AxisKey[] = ["who", "why", "what"];
 
 export const CONTENT = {
   app: {
     name: "Re:roots",
     tagline1: "過去の組織経験から「自分らしさ」を解体し、",
-    tagline2: "3人の自分との対話で行動の選択肢を見つける",
-    headerSubtitle: "自分らしさを解体し、3人の自分との対話で行動の選択肢を見つける",
+    tagline2: "3軸の対話で行動の選択肢を見つける",
+    headerSubtitle: "自分らしさを解体し、3軸の対話で行動の選択肢を見つける",
   },
   nav: {
     back: "← 戻る",
     next: "次へ →",
-    progressLabels: ["棚卸し", "測定", "可視化", "解体", "行動"],
+    progressLabels: ["棚卸し", "測定", "写真", "言語化", "核", "9マス"],
   },
   auth: {
     loginTitle: "ログイン",
-    loginDescription: "登録したメールアドレスを入力してください。確認用のリンクをお送りします。",
+    loginDescription:
+      "登録したメールアドレスを入力してください。確認用のリンクをお送りします。",
     emailPlaceholder: "name@example.com",
     sendLink: "リンクを送る",
     sentHeader: "メールを確認してください",
     sentBody: "届いたリンクをクリックするとログインが完了します。",
     sendError: "送信に失敗しました。もう一度お試しください。",
   },
+
+  // ============================================================
+  // ブロック 0: イントロ（Step 0）
+  // ============================================================
   step0: {
     heading: "このワークでできること",
     overview: [
-      ["🏢", "Step 1", "過去・現在の所属組織を棚卸し"],
-      ["📊", "Step 2", "各組織とのアイデンティティの強さを測定"],
-      ["🗺️", "Step 3", "アイデンティティマップで隔たりを可視化"],
-      ["🔍", "Step 4", "「自分らしさ」をポータブルな要素に解体する"],
-      ["💬", "Step 5", "3人の自分との対話で行動の選択肢を発見"],
+      ["🏢", "ブロック 1", "過去・現在の所属組織を棚卸し"],
+      ["📊", "ブロック 2", "各組織との同一化スコアを測定し、重要組織を特定"],
+      ["📷", "ブロック 3", "重要組織での自分を表す写真を選ぶ"],
+      ["✍️", "ブロック 4", "Who / Why / What の3軸で当時の自分を言語化"],
+      ["💎", "ブロック 5", "3軸を統合した「核」を一文に言語化"],
+      ["🗺️", "ブロック 6", "9マスを完成させてギャップを近づける行動を設計"],
     ] as const,
     startButton: "はじめる →",
     continueButton: "続きから →",
   },
-  step1: {
-    title: "Step 1：組織の棚卸し",
-    description: "これまで所属した組織・チーム・コミュニティを思いつく限り書き出してください。",
-    hint: "（例：高校の部活、大学のゼミ、研究室、1社目の会社、サークルなど）",
-    placeholder: "組織名を入力...",
-    currentLabel: "現在所属中",
-    addButton: "追加",
-    emptyState: "組織をまだ追加していません",
-    currentBadge: "現在",
-    pastBadge: "過去",
-    completeBadge: "✓ 測定済",
-    warning: "※ 過去の組織と現在の組織がそれぞれ最低1つ必要です",
-    nextLabel: "次へ：アイデンティティ測定 →",
+
+  // ============================================================
+  // ブロック 1: 過去・現在の所属組織を可視化
+  // ============================================================
+  block1: {
+    title: "ブロック 1：過去・現在の所属組織を棚卸し",
+    instruction: [
+      "ここから、あなたが今に至るまでに深く関わってきた組織を思い出していきます。",
+      "学生時代の部活、大学のゼミ、アルバイト先、前職、趣味のコミュニティなど、「自分はここにいる」と強く感じていた組織を思い出してください。",
+      "子どもの頃から振り返ることで、人生のなかで自分にとって意味の大きかった組織が思い出しやすくなります。",
+    ],
+    hintTitle: "💡 思い出すヒント：人生のなかで所属してきた組織の例",
+    hintGroups: [
+      {
+        age: "0〜10代（中学生まで）",
+        examples: "小学校・中学校、地元の習い事、子供会など",
+      },
+      {
+        age: "10代後半（高校時代）",
+        examples: "高校の部活・サークル、生徒会、塾・予備校など",
+      },
+      {
+        age: "20代前半（大学時代）",
+        examples: "大学の部活・サークル、ゼミ、研究室、アルバイト先",
+      },
+      {
+        age: "20代後半〜30代",
+        examples: "会社、部署、プロジェクト、副業、趣味のコミュニティ",
+      },
+      {
+        age: "40代以降",
+        examples: "キャリアの転換、ライフイベントを通じた所属",
+      },
+    ],
+    inputHeader: "所属していた／している組織を入力してください",
+    inputDescription: "最大 8 個まで追加できます。",
+    namePlaceholder: "組織名（50字以内）",
+    nameMaxLength: 50,
+    pastLabel: "過去",
+    currentLabel: "現在",
+    addButton: "+ 組織を追加する",
+    deleteButton: "削除",
+    countLabel: (n: number, max: number) => `合計：${n} / ${max} 個`,
+    maxOrgs: 8,
+    warningTagMissing: "過去／現在のいずれかを選択してください。",
+    warningCurrentZero:
+      "現在所属している組織が入力されていませんが、進めてよろしいですか？",
+    warningPastZero:
+      "過去に所属していた組織が入力されていません。現在の組織を対象として進めます。",
+    nextLabel: "次へ：同一化スコアの測定 →",
   },
-  step2: {
-    title: "Step 2：アイデンティティ測定",
-    description: "各組織について、あなたとの心理的なつながりを測定します。",
-    rangeLow: "全く感じない",
-    rangeHigh: "強く感じる",
-    formationLabel: "人格形成度",
-    formationDesc: "今の自分の性格・価値観・考え方を、この組織での経験がどのくらい形作っていると思いますか？",
-    identityStrengthLabel: "組織アイデンティティの強さ",
-    identityStrengthDesc: "次の各文について、現在の感じ方として最も近いものを 1〜7 で選んでください。",
-    identityStrengthLow: "全くそう思わない",
-    identityStrengthHigh: "強くそう思う",
-    frequencyLabel: "現在の関わり頻度",
-    frequencyDesc: "現在、この組織のメンバーとどのくらい関わっていますか？",
-    prevOrg: "← 前の組織",
+
+  // ============================================================
+  // ブロック 2: 全組織への同一化スコア測定
+  // ============================================================
+  block2: {
+    title: "ブロック 2：同一化スコアの測定",
+    description:
+      "ブロック 1 で挙げた組織それぞれについて、以下の質問にお答えください。",
+    instructionPast:
+      "[組織名] について、当時のあなたがどの程度感じていたか、5 段階で評価してください。",
+    instructionCurrent:
+      "[組織名] について、現在のあなたがどの程度感じているか、5 段階で評価してください。",
+    progressLabel: (i: number, total: number) => `${i} / ${total}`,
+    questionsPast: [
+      "誰かが [組織名] を批判すると、自分への侮辱のように感じた",
+      "他の人が [組織名] についてどう思っているかは、私にとって非常に関心があった",
+      "[組織名] について話すとき、私は「彼ら」ではなく「私たち」ということが多かった",
+      "[組織名] の成功は私の成功でもあった",
+      "[組織名] が褒められると、自分が褒められたような感じがした",
+      "メディアが [組織名] を批判すると、自分自身が恥ずかしいと感じた",
+    ],
+    questionsCurrent: [
+      "誰かが [組織名] を批判すると、自分への侮辱のように感じる",
+      "他の人が [組織名] についてどう思っているかは、私にとって非常に関心がある",
+      "[組織名] について話すとき、私は「彼ら」ではなく「私たち」ということが多い",
+      "[組織名] の成功は私の成功でもある",
+      "[組織名] が褒められると、自分が褒められたような感じがする",
+      "メディアが [組織名] を批判すると、自分自身が恥ずかしいと感じる",
+    ],
+    scaleLabelsPast: [
+      "1. 全くそう思わなかった",
+      "2. あまりそう思わなかった",
+      "3. どちらでもない",
+      "4. ややそう思った",
+      "5. 非常にそう思った",
+    ],
+    scaleLabelsCurrent: [
+      "1. 全くそう思わない",
+      "2. あまりそう思わない",
+      "3. どちらでもない",
+      "4. ややそう思う",
+      "5. 非常にそう思う",
+    ],
     nextOrg: "次の組織 →",
-    nextLabel: "次へ：隔たりを可視化 →",
+    prevOrg: "← 前の組織",
+    finishMeasurement: "測定を完了 →",
+
+    // 2-2: 比較表示
+    comparisonTitle: "あなたの結果",
+    comparisonPastTitle: "過去組織で最も同一化していた組織",
+    comparisonCurrentTitle: "現在の所属組織",
+    comparisonNoPast: "過去組織の入力がありません",
+    comparisonNoCurrent: "現在組織の入力がありません",
+    comparisonScoreLabel: "同一化スコア",
+    comparisonGapLabel: "スコアの差：",
+
+    // 2-3: 重要組織の確定
+    confirmIntroPre:
+      "あなたの過去組織のなかで、最も強く「自分はここにいる」と感じていたのは、",
+    confirmIntroPost: " であることが分かりました。",
+    confirmBody: (name: string) =>
+      `このワークでは、この「${name}」に焦点を当てて、当時のあなたが大切にしていたものを今の役割で活かす方法を考えていきます。`,
+    confirmQuestion: (name: string) =>
+      `ワークの対象として、「${name}」で進めてよろしいでしょうか？`,
+    confirmYes: "はい、この組織で進める",
+    confirmManual: "別の組織を選びたい",
+    manualSelectTitle: "対象とする組織を選び直す",
+    manualSelectDescription:
+      "ブロック 1 で入力した組織から 1 つ選んでください。",
+    nextLabel: "次へ：写真を選ぶ →",
   },
-  step3: {
-    title: "Step 3：隔たりの可視化",
-    description: "バブルの大きさ = アイデンティティの強さ、中心からの距離 = 現在の関わりの少なさ",
-    gapScoreLabel: "隔たりスコア",
-    gapTopPast: "アイデンティティ形成度トップ：",
-    gapTopCurrent: "現在：",
-    gapTexts: {
-      high: "あなたが最も「自分らしい」と感じた環境と今の環境には大きな距離があります。次のステップで「自分らしさ」を具体的に解体し、今の環境や別の場でも発揮できる形に変換しましょう。",
-      mid: "過去の経験と今の環境には一定の距離があるようです。次のステップで「自分らしさ」の具体的な要素を紐解いてみましょう。",
-      low: "あなたの過去の経験と今の環境は比較的つながっています。次のステップでさらに深掘りし、自分らしさをより鮮明にしましょう。",
-    },
-    tableHeaders: ["組織", "種別", "IDスコア", "人格形成度", "関わり頻度"],
-    transitionLead: "次のステップでは",
-    transitionBody1: "での経験の中にある「自分らしさ」を具体的に紐解いていきます。",
-    transitionBody2A: "「自分は【",
-    transitionBody2B: "】の人間だ」という捉え方から、",
-    transitionBody3: "「自分はこういう要素を大事にする人間だ」という捉え方に変えることで、",
-    transitionBody4: "自分らしさを今の環境でも、別の場でも発揮できるようになります。",
-    nextLabel: "次へ：自分らしさを紐解く →",
+
+  // ============================================================
+  // ブロック 3: 写真を選ぶ
+  // ============================================================
+  block3: {
+    title: "ブロック 3：写真を選ぶ",
+    instruction: (orgName: string) =>
+      `${orgName} のあなたを最も表現する写真を 1 枚、手元のスマートフォンで選んでください。`,
+    nextLabel: "写真を選び終わったら次へ →",
   },
-  step4: {
-    title: "Step 4：自分らしさを紐解く",
-    introA: "「自分は【",
-    introB: "】の人間だ」",
-    introC: "という大きなかたまりを、特定の組織に依存しないポータブルな要素に分解していきます。",
-    orgNameFallback: "その組織",
-    episodePlaceholder: "具体的な場面・エピソードを自由に書いてください...",
-    keywordPromptBefore: "【",
-    keywordPromptAfter: "】にいた頃、",
-    keywordCta: "→ これを一言で言うと？（組織名を使わずに）",
-    keywordPlaceholder: "一言キーワード",
-    cardTitle: "✨ あなたの「自分らしさ」カード",
-    cardSubA: "「自分は【",
-    cardSubB: "】の人間だ」ではなく——",
-    cardFooter1: "——こういう要素を大事にする人間です。",
-    cardFooter2: "これらは特定の組織に紐づくものではなく、今の環境でも別の場でも発揮できます。",
-    nextLabel: "次へ：3人の自分と対話する →",
+
+  // ============================================================
+  // ブロック 4: 写真を見ながら3軸で書き出す
+  // ============================================================
+  block4: {
+    title: "ブロック 4：3 軸で書き出す",
+    introduction:
+      "選んだ写真を見ながら、その瞬間のあなたについて、3 つの軸で書き出してください。写真をじっくり眺めて、当時の場面に戻った気持ちで答えてみてください。",
+    detailMaxLength: 400,
+    detailHint: "（200 字程度）",
+    summaryMaxLength: 30,
+    summaryCta: "上で書いた内容を、一言で表すとどう表現できますか？",
+    summaryHint: "（30 字以内）",
+    detailPlaceholder: "詳しく書いてみてください...",
+    summaryPlaceholder: "一言で表現すると...",
+    axes: {
+      who: {
+        label: "Who（関係性）",
+        question:
+          "その時、あなたはどんな人たちに囲まれていましたか？ あなたにとってどのような居場所でしたか？",
+        examples: "例：「勝利を共有する仲間」「お互いを深く知る少人数の戦友」",
+      },
+      why: {
+        label: "Why（目的）",
+        question:
+          "その時、あなたは何に向かって頑張っていましたか？ 何を実現したくてその場にいましたか？",
+        examples: "例：「最前線で世の中を伝える」「チームを最高の状態に導く」",
+      },
+      what: {
+        label: "What（行動）",
+        question:
+          "その時、あなたは具体的に何をしていましたか？ どんな振る舞いをする自分でしたか？",
+        examples: "例：「最前線で働く戦闘員」「縁の下の力持ち」",
+      },
+    } as const,
+    summaryRequiredWarning:
+      "3 軸すべての「一言で表すと」を入力すると次へ進めます。",
+    nextLabel: "次へ：核を一文にまとめる →",
   },
-  step5: {
-    title: "Step 5：3人の自分と対話する",
-    selectLead: "「自分らしさ」カードの中から、",
-    selectLeadStrong: "今最も取り戻したい・深めたい要素を1つ",
-    selectLeadTail: "選んでください。",
-    selectHint: "（エピソードが長かったものが自動選択されています。変更可能です）",
-    selectedState: "✓ 1つ選択中",
-    notSelectedState: "1つ選んでください",
-    selectNext: "次へ：対話を始める →",
-    dialogueTitle: "Step 5：3人の自分の対話",
-    dialogueDescription: "選んだ要素について、3人の自分が同じ問いに答えます。思いつくままに書いてください。",
-    dialoguePlaceholder: "思いつくままに...",
-    dialogueNext: "次へ：行動を考える →",
-    actionTitle: "Step 5：行動の選択肢を考える",
-    actionDescription1: "3人の自分の対話から見えてきたことをもとに、今後できる行動を考えてみましょう。",
-    actionDescription2Pre: "3つの方向性のうち、",
-    actionDescription2Strong: "どれか1つだけでも書けば十分",
-    actionDescription2Post: "です。",
-    actionSummaryTitle: "3人の自分の回答（振り返り）",
-    actionPlaceholder: "自由に書いてください...",
-    actionNext: "次へ：今週のプランを決める →",
-    directions: [
-      { key: "craftExperiments", label: "方向性A：今の環境で自分らしさを発揮する", strategy: "Craft Experiments（実験を作る）",        paletteKey: "primary", desc: "新しい活動や役割を、小さく安全に試してみる",            hint: "例：社内有志の勉強会を企画、副業で小さく試す、社内プロジェクトに手を挙げる" },
-      { key: "shiftConnections", label: "方向性B：別の場で自分らしさを発揮する",   strategy: "Shift Connections（つながりを変える）", paletteKey: "accent",  desc: "新しい人間関係や環境に入る",                      hint: "例：過去の仲間に連絡を取り直す、同じ価値観のコミュニティを探す、転職を検討する" },
-      { key: "makeSense",        label: "方向性C：自分のストーリーを紡ぎ直す",     strategy: "Make Sense（意味づけをする）",          paletteKey: "step5",   desc: "過去・現在・未来を振り返り、自分の物語を語り直す", hint: "例：3人の自分の回答を読み返して気づきをノートに書く、信頼できる人に話してみる" },
-    ] as const,
-    weekTitle: "Step 5：今週のプラン",
-    weekLead: "ここまでの気づきを踏まえて、",
-    weekLeadStrong: "今週1つだけ試してみること",
-    weekLeadTail: "を書いてください。小さなことで構いません。",
-    weekCardTitle: "あなたの「自分らしさ」カード（振り返り）",
-    weekPlaceholder: "例：今週中に、前職の同期の○○さんにLINEしてランチの予定を立てる\n例：社内で有志の勉強会を企画するためのメンバーに声をかける",
-    weekNote: "※ 行動するかどうかはあなた次第です。このアプリは、あなたが自分で考え、動き出すきっかけを提供するものです。",
-    completeButton: "完了 ✓",
-    submitSuccess: "回答を送信しました。お疲れさまでした！",
-    backToEdit: "← 編集に戻る",
-    done: {
-      icon: "🌱",
-      title: "お疲れさまでした！",
-      body1: "あなたの「自分らしさ」の輪郭が少しクリアになったはずです。",
-      body2: "小さな一歩が、自分らしさを取り戻す最初の起点になります。",
-      cardTitle: "あなたの「自分らしさ」カード",
-      weekTitle: "今週のプラン",
-      ideasTitle: "行動アイデア",
-      ideaLabels: {
-        craftExperiments: "▶ 現職内で発揮（Craft Experiments）",
-        shiftConnections: "▶ 別の場で発揮（Shift Connections）",
-        makeSense: "▶ 意味づけをする（Make Sense）",
-      },
-    },
-    personLabels: {
-      past: (orgName: string) => `過去の自分（【${orgName}】頃）`,
-      present: () => "今の自分",
-      future: () => "未来の理想の自分（5年後）",
-    },
-    personShort: { past: "過去", present: "今", future: "未来" },
-  },
-  questions: {
-    org: [
-      { id: "belonging", label: "帰属感",        desc: "この組織のトラブルは、自分のトラブルでもあると感じる" },
-      { id: "emotion",   label: "感情的結びつき", desc: "この組織が褒められると、自分も褒められたように感じる" },
-      { id: "defense",   label: "防衛反応",       desc: "この組織が批判されると、自分も侮辱されたように感じる" },
-      { id: "interest",  label: "関心度",         desc: "この組織に対して、今も大きな関心がある" },
-    ] as OrgQuestion[],
-    frequency: [
-      { value: 5, label: "ほぼ毎日" },
-      { value: 4, label: "週1回程度" },
-      { value: 3, label: "月1回程度" },
-      { value: 2, label: "年数回" },
-      { value: 1, label: "ほとんどない" },
-    ] as FrequencyOption[],
-    // 「現組織名」は表示時に対象の組織名へ置換される。
-    identityStrength: [
-      { id: "is_criticism",  text: "誰かが【現組織名】を批判すると、自分への侮辱のように感じる。" },
-      { id: "is_othersView", text: "他の人が【現組織名】についてどう思っているかは、私にとって非常に関心がある。" },
-      { id: "is_we",         text: "【現組織名】について話すとき、私は『彼ら』ではなく『私たち』と言うことが多い。" },
-      { id: "is_success",    text: "【現組織名】の成功は、私の成功でもある。" },
-      { id: "is_praise",     text: "誰かが【現組織名】を褒めると、自分が褒められたように感じる。" },
-      { id: "is_media",      text: "メディアで【現組織名】を批判する報道があったら、私は気まずく感じるだろう。" },
-    ] as IdentityQuestion[],
-    dimensions: [
-      {
-        id: "affective",
-        icon: "🔥", label: "没頭と意味", rbs: "情動的資源（Affective Resources）",
-        rbsDesc: "ポジティブな感情・自己肯定感・仕事への充実感",
-        question: "時間を忘れるほど没頭でき、心から意味を感じていた活動や瞬間はどんなものでしたか？",
-        hint: "どんな仕事・プロジェクト・場面か。「これには意味がある」と感じた理由も含めて",
-        keywordHint: "例：「目的志向のチームでの議論と成果物づくり」",
-      },
-      {
-        id: "relational",
-        icon: "🤝", label: "つながりと居場所", rbs: "関係的資源（Relational Resources）",
-        rbsDesc: "信頼関係・承認・所属感・つながりの質",
-        question: "周囲から認められ、「ここが自分の場所だ」と感じていた理由は何でしたか？",
-        hint: "どんな人間関係・文化・環境の中にいたか。どう見られていたか",
-        keywordHint: "例：「対等に意見を出し合える文化と深い信頼関係」",
-      },
-      {
-        id: "agentic",
-        icon: "⚡", label: "主体性と手応え", rbs: "エージェンシー資源（Agentic Resources）",
-        rbsDesc: "自律性・自己効力感・行動が成果に結びつく感覚",
-        question: "自分の意志で主体的に動き、行動が成果に結びついて手応えを感じていた場面はどんな時でしたか？",
-        hint: "任されていた役割・裁量の範囲・どんな成果・貢献があったか",
-        keywordHint: "例：「裁量を持ってプロジェクトを動かし、チームの成果に直接貢献する」",
-      },
-    ] as Dimension[],
-    dialogue: [
-      {
-        id: "activity", label: "どんな活動をしていますか？",
-        past:    "その頃、この要素を発揮するために、どんな活動をしていましたか？",
-        present: "今、この要素を発揮するために、どんな活動をしていますか？",
-        future:  "未来の理想の状態では、どんな活動をしていたいですか？",
-        strategy: "Craft Experiments（実験を作る）", strategyKey: "craftExperiments",
-      },
-      {
-        id: "people", label: "支えてくれる人は誰ですか？",
-        past:    "その頃、この要素を理解し、支えてくれていた人は誰でしたか？",
-        present: "今、この要素を理解し、支えてくれている人は誰ですか？",
-        future:  "未来の理想の状態では、どんな人に囲まれていたいですか？",
-        strategy: "Shift Connections（つながりを変える）", strategyKey: "shiftConnections",
-      },
-      {
-        id: "meaning_q", label: "どんな意味を持っていますか？",
-        past:    "その頃、この要素はあなたの人生でどんな意味を持っていましたか？",
-        present: "今、この要素はあなたの人生でどんな意味を持っていますか？",
-        future:  "未来、この要素にどんな意味を持たせたいですか？",
-        strategy: "Make Sense（意味づけをする）", strategyKey: "makeSense",
-      },
-    ] as DialogueQuestion[],
-  },
-  bubble: {
-    rings: [
-      { scale: 0.30, label: "深い関わり", op: 0.25 },
-      { scale: 0.55, label: "中程度",     op: 0.18 },
-      { scale: 0.80, label: "薄い関わり", op: 0.12 },
+
+  // ============================================================
+  // ブロック 5: 核を一文にまとめる
+  // ============================================================
+  block5: {
+    title: "ブロック 5：核を一文にまとめる",
+    cardsHeading: "ブロック 4 で書いた 3 つの軸",
+    detailToggle: "詳細を見る ▼",
+    detailToggleClose: "閉じる ▲",
+    instructionLines: [
+      "3 つのカードを見渡してください。",
+      "これら 3 つを貫いて流れている、あなたの核は何でしょうか？",
+      "Who・Why・What を統合して、「自分はどんな人間として、その場にいたのか」を一文にまとめてください。",
     ],
-    selfLabel: "自分",
-    legend: [
-      { paletteKey: "pastBubble", label: "過去の組織" },
-      { paletteKey: "currentBubble", label: "現在の組織" },
+    examplesHeading: "例えば、以下のような表現の仕方があります：",
+    examples: [
+      "「〜することに価値を感じる人間」",
+      "「〜を大切にする人間」",
+      "「〜であることにやりがいを感じる人間」",
+      "「〜のなかで〜したいと願う人間」",
     ],
-    legendCaption: "円の大きさ = アイデンティティの強さ",
-    tooltipLabels: {
-      identity: "IDスコア",
-      formation: "人格形成度",
-      frequency: "関わり頻度",
-    },
+    hint: "ヒント：組織の名前（部活名、会社名など）を使わずに書くと、過去の場所を離れた今でも形を変えて発揮されるあなたの核が見えやすくなります。",
+    inputLabel: "あなたの核",
+    placeholder: "（100 字以内）",
+    maxLength: 100,
+    nextLabel: "次へ：9 マスを完成させる →",
   },
+
+  // ============================================================
+  // ブロック 6: 9マス + ギャップ判定 + 行動設計
+  // ============================================================
+  block6: {
+    title: "ブロック 6：9 マスでギャップを近づける行動を設計",
+    matrixHeaders: ["過去", "現在", "未来（1 年後）"],
+    axisLabels: {
+      who: "Who（関係性）",
+      why: "Why（目的）",
+      what: "What（行動）",
+    } as const,
+
+    // 6-1a: 現在
+    currentTitle: "今のあなたを 3 軸で書く",
+    currentIntro: "今のあなたについて、同じ 3 つの軸で書いてください。",
+    currentQuestions: {
+      who: "今、あなたはどんな人たちに囲まれていますか？ あなたにとってどのような居場所ですか？",
+      why: "今、あなたは何に向かって働いていますか？",
+      what: "今、あなたは具体的に何をしていますか？",
+    } as const,
+
+    // 6-1b: 未来
+    futureTitle: "1 年後のあなたを 3 軸で書く",
+    futureIntro:
+      "過去と現在の 3 軸を見渡してください。ブロック 5 で言葉にしたあなたの核を、1 年後のあなたが今の場所で発揮しているとしたら、どんな 3 軸になっていますか？",
+    futureQuestions: {
+      who: "1 年後、あなたはどんな人たちに囲まれていたいですか？ どのような居場所を作っていたいですか？",
+      why: "1 年後、あなたは何に向かって働いていたいですか？",
+      what: "1 年後、あなたは具体的に何をしていたいですか？",
+    } as const,
+
+    detailMaxLength: 300,
+    summaryMaxLength: 30,
+    detailPlaceholder: "詳しく書いてみてください...",
+    summaryPlaceholder: "一言で表現すると...",
+
+    // 6-2: ギャップ判定
+    gapTitle: "現在と未来のギャップを判定",
+    gapInstruction: [
+      "9 マスを見渡してください。",
+      "「現在」と「未来」を比較して、それぞれの軸でギャップ（差）があるかどうかを判定してください。",
+      "ギャップがあるとは、「未来でこうありたい」と書いた状態に、現在まだ到達していない、あるいは形が違っている、ということです。",
+    ],
+    gapHasGap: "ギャップがある",
+    gapNoGap: "ギャップはない（現在すでに未来に近い形で実現できている）",
+    gapNoGapMessage:
+      "すでに未来に近い形で実現できているとのことですね。このまま継続して、より深く発揮していけるとよいですね。",
+
+    // 6-3: 行動設計
+    actionTitle: "ギャップを近づけるための行動を設計",
+    actionInstruction:
+      "このギャップを近づけるために、今の組織でできることはなんですか？\n大きな目標や、組織を変えるような話ではなく、今のあなたの環境のなかで始められることを書いてください。",
+    actionPlaceholder: "（200 字程度）",
+    actionMaxLength: 400,
+
+    nextLabel: "完了する →",
+    submitting: "送信中...",
+  },
+
+  // ============================================================
+  // 完了画面
+  // ============================================================
+  done: {
+    title: "ワークの完了、お疲れさまでした",
+    body1:
+      "ここで言葉にしたあなたの核と行動を、ぜひ手元に残しておいてください。",
+    body2:
+      "最後に、振り返りのアンケートにお答えください。下のボタンを押すと Google フォームに進みます。",
+    surveyButton: "振り返りアンケートへ進む",
+    surveyMissing:
+      "（振り返りアンケートのリンクは管理者により未設定です）",
+  },
+
+  // ============================================================
+  // 管理画面
+  // ============================================================
   admin: {
     dashboardTitle: "管理画面",
     respondentsLink: "回答者URL管理",
     exportLink: "CSV / Excel ダウンロード",
     importLabel: "Excel から回答をインポート（管理者のみ）",
     csvDownload: "CSV でダウンロード（wide）",
-    xlsxDownload: "Excel でダウンロード（4シート）",
-  },
-  excel: {
-    fileName: "reroots_v2_回答データ.xlsx",
-    sheets: { orgs: "組織データ", identity: "自分らしさの解体", dialogue: "3人の対話", action: "行動プラン" },
-    orgHeaders: [
-      "回答者", "組織名", "種別(現在/過去)",
-      "帰属感(1-10)", "感情的結びつき(1-10)", "防衛反応(1-10)", "関心度(1-10)",
-      "人格形成度(0-100%)", "関わり頻度(1-5)",
-    ],
-    identityHeaders: ["回答者", "対象組織", "次元", "RBS資源", "エピソード記述", "一言キーワード"],
-    dialogueHeaders: ["回答者", "次元", "質問", "過去の自分", "今の自分", "未来の自分"],
-    actionHeaders: ["回答者", "戦略/項目", "内容"],
-    actionRows: {
-      craftExperiments: "Craft Experiments（現職内で発揮）",
-      shiftConnections: "Shift Connections（別の場で発揮）",
-      makeSense: "Make Sense（意味づけ）",
-    },
-    weeklyRowLabel: "今週のプラン",
+    xlsxDownload: "Excel でダウンロード（wide）",
   },
 } as const;
 
 // カラーパレット（CSS 変数相当）
 export const COLORS = {
-  primary: "#4F46E5", pl: "#818CF8", pbg: "#EEF2FF",
-  accent: "#10B981", al: "#6EE7B7", abg: "#ECFDF5",
-  warn: "#F59E0B", wbg: "#FFFBEB",
+  primary: "#0F766E",
+  pl: "#5EEAD4",
+  pbg: "#ECFDF5",
+  accent: "#10B981",
+  al: "#6EE7B7",
+  abg: "#ECFDF5",
+  warn: "#F59E0B",
+  wbg: "#FFFBEB",
   danger: "#EF4444",
-  bg: "#F9FAFB", card: "#FFFFFF",
-  text: "#111827", sub: "#6B7280", border: "#E5E7EB",
-  step4: "#7C3AED", step4bg: "#F5F3FF", step4l: "#C4B5FD",
-  step5: "#0891B2", step5bg: "#ECFEFF", step5l: "#A5F3FC",
-  pastBubble: "#6366F1", pastBubbleMid: "#4F46E5", pastBubbleDark: "#3730A3",
-  currentBubble: "#10B981", currentBubbleMid: "#059669", currentBubbleDark: "#047857",
+  bg: "#F9FAFB",
+  card: "#FFFFFF",
+  text: "#111827",
+  sub: "#6B7280",
+  border: "#E5E7EB",
+  who: "#4A9FBF",
+  why: "#E8A53F",
+  what: "#EF6C66",
 } as const;
 
 export type Palette = typeof COLORS;
