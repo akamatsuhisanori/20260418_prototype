@@ -40,8 +40,8 @@ export default defineEventHandler(async (event) => {
     "重要組織_選定方法",
     ...AXIS_KEYS.flatMap((k) => [`B4_${k}_詳細`, `B4_${k}_一言`]),
     "B5_核",
-    ...AXIS_KEYS.flatMap((k) => [`B6_現在_${k}_詳細`, `B6_現在_${k}_一言`]),
-    ...AXIS_KEYS.flatMap((k) => [`B6_未来_${k}_詳細`, `B6_未来_${k}_一言`]),
+    ...AXIS_KEYS.map((k) => `B6_現在_${k}_ナラティブ`),
+    ...AXIS_KEYS.map((k) => `B6_未来_${k}_ナラティブ`),
     ...AXIS_KEYS.flatMap((k) => [`B6_${k}_ギャップ有無`, `B6_${k}_行動`]),
   ];
 
@@ -91,11 +91,9 @@ export default defineEventHandler(async (event) => {
     cells.push(d.coreStatement ?? "");
     for (const k of AXIS_KEYS) {
       cells.push(d.block6?.current?.[k]?.detail ?? "");
-      cells.push(d.block6?.current?.[k]?.summary ?? "");
     }
     for (const k of AXIS_KEYS) {
       cells.push(d.block6?.future?.[k]?.detail ?? "");
-      cells.push(d.block6?.future?.[k]?.summary ?? "");
     }
     for (const k of AXIS_KEYS) {
       const g = d.block6?.gaps?.[k];

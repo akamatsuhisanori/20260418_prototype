@@ -49,15 +49,9 @@ export default defineEventHandler(async (event) => {
     ]),
     // ブロック 5: 核
     "B5_核",
-    // ブロック 6: 9 マス（現在 / 未来）
-    ...AXIS_KEYS.flatMap((k) => [
-      `B6_現在_${k}_詳細`,
-      `B6_現在_${k}_一言`,
-    ]),
-    ...AXIS_KEYS.flatMap((k) => [
-      `B6_未来_${k}_詳細`,
-      `B6_未来_${k}_一言`,
-    ]),
+    // ブロック 6: 9 マス（現在 / 未来 — ナラティブのみ）
+    ...AXIS_KEYS.map((k) => `B6_現在_${k}_ナラティブ`),
+    ...AXIS_KEYS.map((k) => `B6_未来_${k}_ナラティブ`),
     // ブロック 6: ギャップ判定 + 行動
     ...AXIS_KEYS.flatMap((k) => [
       `B6_${k}_ギャップ有無`,
@@ -112,15 +106,13 @@ export default defineEventHandler(async (event) => {
     }
     // ブロック 5
     cells.push(d.coreStatement ?? "");
-    // ブロック 6: 現在
+    // ブロック 6: 現在（ナラティブのみ）
     for (const k of AXIS_KEYS) {
       cells.push(d.block6?.current?.[k]?.detail ?? "");
-      cells.push(d.block6?.current?.[k]?.summary ?? "");
     }
-    // ブロック 6: 未来
+    // ブロック 6: 未来（ナラティブのみ）
     for (const k of AXIS_KEYS) {
       cells.push(d.block6?.future?.[k]?.detail ?? "");
-      cells.push(d.block6?.future?.[k]?.summary ?? "");
     }
     // ギャップ + 行動
     for (const k of AXIS_KEYS) {

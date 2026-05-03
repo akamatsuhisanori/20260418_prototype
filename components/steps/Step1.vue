@@ -108,6 +108,9 @@ const tryNext = () => {
     <!-- 入力欄 -->
     <h3 style="margin-top: 24px">{{ CONTENT.block1.inputHeader }}</h3>
     <p class="small muted">{{ CONTENT.block1.inputDescription }}</p>
+    <p class="small" style="color: var(--warn); font-weight: 600; margin-top: 8px">
+      {{ CONTENT.block1.requiredCurrentNote }}
+    </p>
 
     <div class="stack">
       <div

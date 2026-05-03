@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit --allow-empty -m ' *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(xargs grep *)",
+      "Bash(mv \"server/api/respondent/[token].get.ts\" \"server/api/respondent/[token]/index.get.ts\")",
+      "Bash(mv \"server/api/respondent/[token].put.ts\" \"server/api/respondent/[token]/index.put.ts\")",
+      "Bash(git restore *)",
+      "Bash(grep -v \"//\")",
+      "Bash(awk '-FCONTENT\\\\\\\\.' '{for\\(i=2;i<=NF;i++\\) print $i}')",
+      "Bash(awk -F'[^a-zA-Z0-9_]' '{print $1}')"
+    ]
+  }
+}

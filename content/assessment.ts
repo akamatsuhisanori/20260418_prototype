@@ -83,6 +83,8 @@ export const CONTENT = {
     ],
     inputHeader: "所属していた／している組織を入力してください",
     inputDescription: "最大 8 個まで追加できます。",
+    requiredCurrentNote:
+      "※ このワークでは「現在所属している組織」も必ず 1 つ以上入力してください。",
     namePlaceholder: "組織名（50字以内）",
     nameMaxLength: 50,
     pastLabel: "過去",

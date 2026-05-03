@@ -2,10 +2,13 @@
 // ============================================================
 // ブロック 6：9 マス + ギャップ判定 + 行動設計
 //   subStep:
-//     0: 6-1a 現在の 3 軸を書く
-//     1: 6-1b 未来の 3 軸を書く
+//     0: 6-1a 現在の 3 軸を書く（ナラティブのみ）
+//     1: 6-1b 未来の 3 軸を書く（ナラティブのみ）
 //     2: 6-2 9 マス俯瞰 + ギャップ判定
 //     3: 6-3 ギャップを近づける行動を入力（ギャップ「ある」のみ）
+//
+//   過去：ブロック 4 で書いた「一言」を 9 マスに表示
+//   現在・未来：ナラティブ（詳細記述）のみを入力。9 マスでは要約表示。
 // ============================================================
 import { CONTENT, AXIS_KEYS, type AxisKey } from "~/content/assessment";
 
@@ -28,14 +31,6 @@ const setDetail = (
   mutate((s) => {
     s.block6[phase][key].detail = v.slice(0, CONTENT.block6.detailMaxLength);
   });
-const setSummary = (
-  phase: "current" | "future",
-  key: AxisKey,
-  v: string,
-) =>
-  mutate((s) => {
-    s.block6[phase][key].summary = v.slice(0, CONTENT.block6.summaryMaxLength);
-  });
 
 const setGap = (key: AxisKey, hasGap: boolean) =>
   mutate((s) => {
@@ -47,13 +42,13 @@ const setAction = (key: AxisKey, v: string) =>
     s.block6.gaps[key].action = v.slice(0, CONTENT.block6.actionMaxLength);
   });
 
-const phaseSummariesFilled = (phase: "current" | "future") =>
+const phaseDetailsFilled = (phase: "current" | "future") =>
   AXIS_KEYS.every(
-    (k) => state.value.block6[phase][k].summary.trim().length > 0,
+    (k) => state.value.block6[phase][k].detail.trim().length > 0,
   );
 
-const currentFilled = computed(() => phaseSummariesFilled("current"));
-const futureFilled = computed(() => phaseSummariesFilled("future"));
+const currentFilled = computed(() => phaseDetailsFilled("current"));
+const futureFilled = computed(() => phaseDetailsFilled("future"));
 const gapsAnswered = computed(() =>
   AXIS_KEYS.every((k) => state.value.block6.gaps[k].hasGap !== null),
 );
@@ -75,10 +70,19 @@ const finish = async () => {
   else alert("送信に失敗しました。もう一度お試しください。");
 };
 
-// 9 マス表示用
-const cellSummary = (phase: "past" | "current" | "future", key: AxisKey) => {
-  if (phase === "past") return state.value.block4[key].summary || "（未入力）";
-  return state.value.block6[phase][key].summary || "（未入力）";
+// 過去はブロック 4 の「一言」、現在／未来はナラティブを短く要約表示
+const truncate = (s: string, n: number) =>
+  s.length > n ? s.slice(0, n) + "…" : s;
+
+const cellLabel = (
+  phase: "past" | "current" | "future",
+  key: AxisKey,
+): string => {
+  if (phase === "past") {
+    return state.value.block4[key].summary || "（未入力）";
+  }
+  const detail = state.value.block6[phase][key].detail;
+  return detail ? truncate(detail, 40) : "（未入力）";
 };
 </script>
 
@@ -107,17 +111,6 @@ const cellSummary = (phase: "past" | "current" | "future", key: AxisKey) => {
         />
         <p class="tiny muted">
           {{ state.block6.current[key].detail.length }} / {{ CONTENT.block6.detailMaxLength }} 字
-        </p>
-        <input
-          type="text"
-          :value="state.block6.current[key].summary"
-          :placeholder="CONTENT.block6.summaryPlaceholder"
-          :maxlength="CONTENT.block6.summaryMaxLength"
-          style="margin-top: 8px"
-          @input="setSummary('current', key, ($event.target as HTMLInputElement).value)"
-        />
-        <p class="tiny muted">
-          一言：{{ state.block6.current[key].summary.length }} / {{ CONTENT.block6.summaryMaxLength }} 字
         </p>
       </div>
 
@@ -157,17 +150,6 @@ const cellSummary = (phase: "past" | "current" | "future", key: AxisKey) => {
         <p class="tiny muted">
           {{ state.block6.future[key].detail.length }} / {{ CONTENT.block6.detailMaxLength }} 字
         </p>
-        <input
-          type="text"
-          :value="state.block6.future[key].summary"
-          :placeholder="CONTENT.block6.summaryPlaceholder"
-          :maxlength="CONTENT.block6.summaryMaxLength"
-          style="margin-top: 8px"
-          @input="setSummary('future', key, ($event.target as HTMLInputElement).value)"
-        />
-        <p class="tiny muted">
-          一言：{{ state.block6.future[key].summary.length }} / {{ CONTENT.block6.summaryMaxLength }} 字
-        </p>
       </div>
 
       <NavButtons
@@ -193,9 +175,9 @@ const cellSummary = (phase: "past" | "current" | "future", key: AxisKey) => {
         <tbody>
           <tr v-for="key in AXIS_KEYS" :key="`row-${key}`">
             <th>{{ CONTENT.block6.axisLabels[key] }}</th>
-            <td><strong>{{ cellSummary('past', key) }}</strong></td>
-            <td><strong>{{ cellSummary('current', key) }}</strong></td>
-            <td><strong>{{ cellSummary('future', key) }}</strong></td>
+            <td><strong>{{ cellLabel('past', key) }}</strong></td>
+            <td>{{ cellLabel('current', key) }}</td>
+            <td>{{ cellLabel('future', key) }}</td>
           </tr>
         </tbody>
       </table>
@@ -217,10 +199,10 @@ const cellSummary = (phase: "past" | "current" | "future", key: AxisKey) => {
       >
         <h3>{{ CONTENT.block6.axisLabels[key] }} のギャップ</h3>
         <p class="small">
-          現在：<strong>{{ cellSummary('current', key) }}</strong>
+          現在：<span style="white-space: pre-wrap">{{ state.block6.current[key].detail || "（未入力）" }}</span>
         </p>
         <p class="small">
-          未来：<strong>{{ cellSummary('future', key) }}</strong>
+          未来：<span style="white-space: pre-wrap">{{ state.block6.future[key].detail || "（未入力）" }}</span>
         </p>
         <div class="stack" style="gap: 4px; margin-top: 8px">
           <label class="row" style="gap: 6px; font-weight: 400">
@@ -265,10 +247,10 @@ const cellSummary = (phase: "past" | "current" | "future", key: AxisKey) => {
       >
         <h3>{{ CONTENT.block6.axisLabels[key] }}</h3>
         <p class="small">
-          現在：<strong>{{ cellSummary('current', key) }}</strong>
+          現在：<span style="white-space: pre-wrap">{{ state.block6.current[key].detail || "（未入力）" }}</span>
         </p>
         <p class="small">
-          未来：<strong>{{ cellSummary('future', key) }}</strong>
+          未来：<span style="white-space: pre-wrap">{{ state.block6.future[key].detail || "（未入力）" }}</span>
         </p>
 
         <template v-if="state.block6.gaps[key].hasGap === true">
