@@ -12,6 +12,7 @@
 // ============================================================
 
 export type OrgQuestion = { id: string; label: string; desc: string };
+export type IdentityQuestion = { id: string; text: string };
 export type FrequencyOption = { value: number; label: string };
 export type Dimension = {
   id: string;
@@ -88,6 +89,10 @@ export const CONTENT = {
     rangeHigh: "強く感じる",
     formationLabel: "人格形成度",
     formationDesc: "今の自分の性格・価値観・考え方を、この組織での経験がどのくらい形作っていると思いますか？",
+    identityStrengthLabel: "組織アイデンティティの強さ",
+    identityStrengthDesc: "次の各文について、現在の感じ方として最も近いものを 1〜7 で選んでください。",
+    identityStrengthLow: "全くそう思わない",
+    identityStrengthHigh: "強くそう思う",
     frequencyLabel: "現在の関わり頻度",
     frequencyDesc: "現在、この組織のメンバーとどのくらい関わっていますか？",
     prevOrg: "← 前の組織",
@@ -203,6 +208,15 @@ export const CONTENT = {
       { value: 2, label: "年数回" },
       { value: 1, label: "ほとんどない" },
     ] as FrequencyOption[],
+    // 「現組織名」は表示時に対象の組織名へ置換される。
+    identityStrength: [
+      { id: "is_criticism",  text: "誰かが【現組織名】を批判すると、自分への侮辱のように感じる。" },
+      { id: "is_othersView", text: "他の人が【現組織名】についてどう思っているかは、私にとって非常に関心がある。" },
+      { id: "is_we",         text: "【現組織名】について話すとき、私は『彼ら』ではなく『私たち』と言うことが多い。" },
+      { id: "is_success",    text: "【現組織名】の成功は、私の成功でもある。" },
+      { id: "is_praise",     text: "誰かが【現組織名】を褒めると、自分が褒められたように感じる。" },
+      { id: "is_media",      text: "メディアで【現組織名】を批判する報道があったら、私は気まずく感じるだろう。" },
+    ] as IdentityQuestion[],
     dimensions: [
       {
         id: "affective",

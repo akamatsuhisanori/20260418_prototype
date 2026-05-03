@@ -58,6 +58,10 @@ export interface AssessmentState {
     past: Record<string, Record<string, number>>;
     current: Record<string, Record<string, number>>;
   };
+  identityStrength: {
+    past: Record<string, Record<string, number>>;
+    current: Record<string, Record<string, number>>;
+  };
   dialogue: Record<string, string>;
   actions: {
     craftExperiments: string;

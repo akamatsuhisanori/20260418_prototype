@@ -14,6 +14,7 @@ const EMPTY_STATE = (): AssessmentState => ({
   orgs: { past: ["", "", ""], current: ["", "", ""] },
   frequencies: { past: {}, current: {} },
   dimensions: { past: {}, current: {} },
+  identityStrength: { past: {}, current: {} },
   dialogue: {},
   actions: {
     craftExperiments: "",

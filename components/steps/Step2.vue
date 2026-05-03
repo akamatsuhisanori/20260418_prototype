@@ -30,6 +30,23 @@ const setDim = (dimKey: string, value: number) => {
   });
 };
 
+const getIdentityValue = (qKey: string) =>
+  current.value &&
+  state.value.identityStrength[current.value.phase]?.[current.value.name]?.[qKey] || 0;
+
+const setIdentity = (qKey: string, value: number) => {
+  if (!current.value) return;
+  mutate((s) => {
+    const phaseMap = s.identityStrength[current.value!.phase];
+    if (!phaseMap[current.value!.name]) phaseMap[current.value!.name] = {};
+    phaseMap[current.value!.name][qKey] = value;
+  });
+};
+
+// 質問文の「現組織名」を、現在表示している組織名に置換する。
+const identityQuestionText = (template: string) =>
+  current.value ? template.replaceAll("現組織名", current.value.name) : template;
+
 const freqValue = computed(() =>
   current.value
     ? state.value.frequencies[current.value.phase][current.value.name] || 0
@@ -46,6 +63,9 @@ const orgComplete = (o: { phase: "past" | "current"; name: string }) => {
   const dims = state.value.dimensions[o.phase]?.[o.name];
   if (!dims) return false;
   if (CONTENT.questions.dimensions.some((d) => !dims[d.id])) return false;
+  const ident = state.value.identityStrength[o.phase]?.[o.name];
+  if (!ident) return false;
+  if (CONTENT.questions.identityStrength.some((q) => !ident[q.id])) return false;
   if (!state.value.frequencies[o.phase][o.name]) return false;
   return true;
 };
@@ -105,6 +125,37 @@ const back = () => {
           <span style="width: 24px; text-align: right">
             <strong>{{ getDimValue(dim.id) }}</strong>
           </span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>{{ CONTENT.step2.identityStrengthLabel }}</label>
+        <p class="small muted" style="margin: 4px 0 8px">
+          {{ CONTENT.step2.identityStrengthDesc }}
+        </p>
+        <div
+          v-for="q in CONTENT.questions.identityStrength"
+          :key="q.id"
+          class="stack"
+          style="gap: 4px; margin-bottom: 12px"
+        >
+          <p style="margin: 0">{{ identityQuestionText(q.text) }}</p>
+          <div class="row">
+            <span class="tiny muted">{{ CONTENT.step2.identityStrengthLow }}</span>
+            <input
+              type="range"
+              min="0"
+              max="7"
+              step="1"
+              :value="getIdentityValue(q.id)"
+              @input="setIdentity(q.id, Number(($event.target as HTMLInputElement).value))"
+              style="flex: 1"
+            />
+            <span class="tiny muted">{{ CONTENT.step2.identityStrengthHigh }}</span>
+            <span style="width: 24px; text-align: right">
+              <strong>{{ getIdentityValue(q.id) || "—" }}</strong>
+            </span>
+          </div>
         </div>
       </div>
 
