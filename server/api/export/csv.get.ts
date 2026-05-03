@@ -13,7 +13,8 @@ export default defineEventHandler(async (event) => {
 
   const { data: rows, error } = await admin
     .from("responses")
-    .select("user_id, data, is_submitted, submitted_at, updated_at, profiles:profiles!inner(email)")
+    .select("label, access_token, data, is_submitted, submitted_at, updated_at")
+    .eq("is_revoked", false)
     .order("updated_at", { ascending: false });
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message });
@@ -24,7 +25,7 @@ export default defineEventHandler(async (event) => {
 
   // ---- header ----
   const header: string[] = [
-    "回答者メール",
+    "回答者",
     "提出状態",
     "送信日時",
     "更新日時",
@@ -69,12 +70,10 @@ export default defineEventHandler(async (event) => {
 
   for (const row of rows ?? []) {
     const d = (row.data as AssessmentState) || null;
-    const email = Array.isArray(row.profiles)
-      ? (row.profiles[0] as any)?.email
-      : (row.profiles as any)?.email;
+    const respondent = row.label || `token:${row.access_token.slice(0, 8)}`;
 
     const cells: (string | number)[] = [
-      email ?? "",
+      respondent,
       row.is_submitted ? "提出済" : "未提出",
       row.submitted_at ?? "",
       row.updated_at ?? "",

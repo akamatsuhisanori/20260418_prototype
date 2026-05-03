@@ -20,21 +20,21 @@ export interface ProfileRow {
   updated_at: string;
 }
 
-export interface InvitationRow {
-  id: string;
-  email: string;
-  status: "pending" | "accepted" | "revoked";
-  note: string | null;
-  invited_by: string | null;
-  invited_at: string;
-  accepted_at: string | null;
-}
-
+// ResponseRow:
+//   - access_token   : 回答者用 URL に埋める推測困難な文字列（ユニーク）
+//   - label          : 管理画面で表示する任意のラベル（メモ）
+//   - user_id        : 旧スキーマで残った admin 用紐付け。回答者用は null
+//   - is_revoked     : 管理者が無効化したフラグ
+//   - created_by     : 発行した admin の profile id
 export interface ResponseRow {
   id: string;
-  user_id: string;
+  access_token: string;
+  label: string | null;
+  user_id: string | null;
   data: AssessmentState;
   is_submitted: boolean;
+  is_revoked: boolean;
+  created_by: string | null;
   started_at: string;
   updated_at: string;
   submitted_at: string | null;
@@ -87,14 +87,9 @@ export type Database = {
         Insert: Partial<ProfileRow> & Pick<ProfileRow, "id" | "email">;
         Update: Partial<ProfileRow>;
       };
-      invitations: {
-        Row: InvitationRow;
-        Insert: Partial<InvitationRow> & Pick<InvitationRow, "email">;
-        Update: Partial<InvitationRow>;
-      };
       responses: {
         Row: ResponseRow;
-        Insert: Partial<ResponseRow> & Pick<ResponseRow, "user_id">;
+        Insert: Partial<ResponseRow> & Pick<ResponseRow, "access_token">;
         Update: Partial<ResponseRow>;
       };
     };

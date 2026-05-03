@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// ログインページ。@nuxtjs/supabase の redirectOptions で
-// 未ログインなら全ページから飛ばされる。
+// 管理者ログインページ。回答者はログイン不要。
 import { CONTENT } from "~/content/assessment";
 
 definePageMeta({ layout: false });
@@ -15,20 +14,7 @@ const send = async () => {
   errorMsg.value = "";
   if (!email.value.trim()) return;
   loading.value = true;
-  // 招待チェックはサーバー API 側で行う（未招待は Magic Link を送らない）
   try {
-    const res = await $fetch<{ ok: boolean; reason?: string }>(
-      "/api/invite/check",
-      {
-        method: "POST",
-        body: { email: email.value.trim() },
-      },
-    );
-    if (!res.ok) {
-      errorMsg.value = CONTENT.auth.notInvited;
-      loading.value = false;
-      return;
-    }
     const { error } = await supabase.auth.signInWithOtp({
       email: email.value.trim(),
       options: {

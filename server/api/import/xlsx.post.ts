@@ -1,19 +1,30 @@
 // ============================================================
 // /api/import/xlsx
-//   admin が、過去に reroots v2 (スタンドアロン .jsx) からエクスポートした
-//   Excel ファイルを取り込み、responses.data を上書きする。
+//   admin が、過去の Excel エクスポートを取り込み、
+//   1 行目の「回答者」（旧「回答者メール」）をキーに
+//   responses 行を作成 / 上書きする。
 //
-//   1 行目の "回答者メール" をキーに既存ユーザを探す。
-//   存在しないメールは invitations に追加だけする（ログインするとプロフィール作成）。
+//   ログイン廃止後の仕様:
+//     - 同じラベルの既存 responses があれば上書き
+//     - 無ければ新規 access_token を発行して作成（作った URL は admin 画面で確認）
 // ============================================================
-import { createReadStream } from "node:fs";
 import * as XLSX from "xlsx";
 import { CONTENT } from "~/content/assessment";
 import { getSupabaseAdmin, requireAdmin } from "~/server/utils/supabase-admin";
+import { generateAccessToken } from "~/server/utils/token";
 import type { AssessmentState } from "~/types/database.types";
 
+const RESPONDENT_KEYS = ["回答者", "回答者メール"] as const;
+const respondentOf = (r: Record<string, unknown>): string => {
+  for (const k of RESPONDENT_KEYS) {
+    const v = r[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
+};
+
 export default defineEventHandler(async (event) => {
-  await requireAdmin(event);
+  const adminUser = await requireAdmin(event);
 
   const form = await readMultipartFormData(event);
   if (!form) {
@@ -28,31 +39,32 @@ export default defineEventHandler(async (event) => {
   const dims = CONTENT.questions.dimensions;
   const dialogues = CONTENT.questions.dialogue;
 
-  // email -> AssessmentState の部分集合 を組み立てる
+  // label -> AssessmentState の部分集合 を組み立てる
   const merged: Record<string, AssessmentState> = {};
 
-  const getOrInit = (email: string): AssessmentState => {
-    if (!merged[email]) {
-      merged[email] = {
+  const getOrInit = (key: string): AssessmentState => {
+    if (!merged[key]) {
+      merged[key] = {
         orgs: { past: ["", "", ""], current: ["", "", ""] },
         frequencies: { past: {}, current: {} },
         dimensions: { past: {}, current: {} },
+        identityStrength: { past: {}, current: {} },
         dialogue: {},
         actions: { craftExperiments: "", shiftConnections: "", makeSense: "" },
         meta: { step: 5, subStep: 4, updatedAt: new Date().toISOString() },
       };
     }
-    return merged[email];
+    return merged[key];
   };
 
   // ---- 組織データ ----
   const orgSheet = wb.Sheets[CONTENT.excel.sheets.orgs];
   if (orgSheet) {
-    const rows = XLSX.utils.sheet_to_json<any>(orgSheet, { defval: "" });
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(orgSheet, { defval: "" });
     for (const r of rows) {
-      const email = String(r["回答者メール"] ?? "").trim().toLowerCase();
-      if (!email) continue;
-      const state = getOrInit(email);
+      const key = respondentOf(r);
+      if (!key) continue;
+      const state = getOrInit(key);
       const phase: "past" | "current" =
         String(r["種別(現在/過去)"] ?? "").includes("現在") ? "current" : "past";
       const name = String(r["組織名"] ?? "").trim();
@@ -60,9 +72,7 @@ export default defineEventHandler(async (event) => {
       const slot = state.orgs[phase].findIndex((x) => !x);
       if (slot >= 0) state.orgs[phase][slot] = name;
       state.frequencies[phase][name] = Number(r["関わり頻度(1-5)"]) || 0;
-      // 人格形成度 0-100 → 10 段階平均に戻す（1 次元ぶんの当てはめで OK）
       const formation = Number(r["人格形成度(0-100%)"]) || 0;
-      // ざっくり同値に 3 次元を埋める（情報が足りないので）
       const tenScale = Math.round((formation / 100) * 10);
       state.dimensions[phase][name] = {};
       for (const d of dims) state.dimensions[phase][name][d.id] = tenScale;
@@ -72,11 +82,11 @@ export default defineEventHandler(async (event) => {
   // ---- 自分らしさの解体 ----
   const idSheet = wb.Sheets[CONTENT.excel.sheets.identity];
   if (idSheet) {
-    const rows = XLSX.utils.sheet_to_json<any>(idSheet, { defval: "" });
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(idSheet, { defval: "" });
     for (const r of rows) {
-      const email = String(r["回答者メール"] ?? "").trim().toLowerCase();
-      if (!email) continue;
-      const state = getOrInit(email);
+      const key = respondentOf(r);
+      if (!key) continue;
+      const state = getOrInit(key);
       const dimLabel = String(r["次元"] ?? "").trim();
       const dim = dims.find((d) => d.label === dimLabel);
       if (!dim) continue;
@@ -88,11 +98,11 @@ export default defineEventHandler(async (event) => {
   // ---- 3人の対話 ----
   const dialogSheet = wb.Sheets[CONTENT.excel.sheets.dialogue];
   if (dialogSheet) {
-    const rows = XLSX.utils.sheet_to_json<any>(dialogSheet, { defval: "" });
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(dialogSheet, { defval: "" });
     for (const r of rows) {
-      const email = String(r["回答者メール"] ?? "").trim().toLowerCase();
-      if (!email) continue;
-      const state = getOrInit(email);
+      const key = respondentOf(r);
+      if (!key) continue;
+      const state = getOrInit(key);
       const dimLabel = String(r["次元"] ?? "").trim();
       const dim = dims.find((d) => d.label === dimLabel) || dims[0];
       state.dialogue["step5:selectedDim"] = dim.id;
@@ -108,11 +118,11 @@ export default defineEventHandler(async (event) => {
   // ---- 行動プラン ----
   const actSheet = wb.Sheets[CONTENT.excel.sheets.action];
   if (actSheet) {
-    const rows = XLSX.utils.sheet_to_json<any>(actSheet, { defval: "" });
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(actSheet, { defval: "" });
     for (const r of rows) {
-      const email = String(r["回答者メール"] ?? "").trim().toLowerCase();
-      if (!email) continue;
-      const state = getOrInit(email);
+      const key = respondentOf(r);
+      if (!key) continue;
+      const state = getOrInit(key);
       const kind = String(r["戦略/項目"] ?? "").trim();
       const content = String(r["内容"] ?? "");
       if (kind.startsWith("Craft")) state.actions.craftExperiments = content;
@@ -123,46 +133,31 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // ---- responses に書き戻す ----
+  // ---- responses に書き戻す（label でマッチ → 無ければ新規発行）----
   const admin = getSupabaseAdmin();
   let imported = 0;
 
-  for (const [email, stateData] of Object.entries(merged)) {
-    // 対象ユーザのプロフィールを引く
-    const { data: profile } = await admin
-      .from("profiles")
+  for (const [label, stateData] of Object.entries(merged)) {
+    const { data: existing } = await admin
+      .from("responses")
       .select("id")
-      .eq("email", email)
+      .eq("label", label)
       .maybeSingle();
 
-    if (profile) {
-      // upsert
-      const { data: existing } = await admin
-        .from("responses")
-        .select("id")
-        .eq("user_id", profile.id)
-        .maybeSingle();
-      if (existing) {
-        await admin
-          .from("responses")
-          .update({ data: stateData })
-          .eq("id", existing.id);
-      } else {
-        await admin.from("responses").insert({
-          user_id: profile.id,
-          data: stateData,
-        });
-      }
-      imported += 1;
-    } else {
-      // まだログインしていないので招待だけ登録
+    if (existing) {
       await admin
-        .from("invitations")
-        .upsert(
-          { email, status: "pending", note: "imported from legacy xlsx" },
-          { onConflict: "email" },
-        );
+        .from("responses")
+        .update({ data: stateData })
+        .eq("id", existing.id);
+    } else {
+      await admin.from("responses").insert({
+        access_token: generateAccessToken(),
+        label,
+        data: stateData,
+        created_by: adminUser.id,
+      });
     }
+    imported += 1;
   }
 
   return { ok: true, imported };

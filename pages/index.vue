@@ -1,7 +1,7 @@
 <script setup lang="ts">
+// 管理者向けトップページ。回答者はトークン URL から /assessment/[token] に直接アクセス。
 import { CONTENT } from "~/content/assessment";
 
-const { isAdmin } = useIsAdmin();
 const user = useSupabaseUser();
 const supabase = useSupabaseClient();
 
@@ -18,25 +18,11 @@ const signOut = async () => {
       <span class="small muted" style="margin-left: auto">{{ user?.email }}</span>
     </header>
 
-    <AppCard>
-      <h2>{{ CONTENT.app.headerSubtitle }}</h2>
-      <p class="muted">{{ CONTENT.app.tagline1 }}{{ CONTENT.app.tagline2 }}</p>
-
-      <div class="btn-row">
-        <span />
-        <div class="btn-right">
-          <NuxtLink to="/assessment" class="btn btn--primary">
-            アセスメントを開始
-          </NuxtLink>
-        </div>
-      </div>
-    </AppCard>
-
-    <AppCard v-if="isAdmin" soft>
+    <AppCard soft>
       <h3>{{ CONTENT.admin.dashboardTitle }}</h3>
       <div class="row">
         <NuxtLink to="/admin" class="btn">管理ダッシュボード</NuxtLink>
-        <NuxtLink to="/admin/invitations" class="btn">{{ CONTENT.admin.invitationsLink }}</NuxtLink>
+        <NuxtLink to="/admin/respondents" class="btn">{{ CONTENT.admin.respondentsLink }}</NuxtLink>
         <NuxtLink to="/admin/export" class="btn">{{ CONTENT.admin.exportLink }}</NuxtLink>
       </div>
     </AppCard>

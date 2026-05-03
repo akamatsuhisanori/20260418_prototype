@@ -1,25 +1,25 @@
 // ============================================================
 // auth.global.ts
-//   - /login と /confirm 以外は未ログインだと /login に飛ばす
-//   - @nuxtjs/supabase の redirectOptions でも同じ挙動になるが、
-//     admin 配下の権限チェック等もまとめたいのでグローバルに 1 枚置く
+//   /assessment/* （回答者用トークン URL）はログイン不要で公開。
+//   /admin/* と / は admin ログイン必須（admin 以外は /login へ）。
 // ============================================================
 export default defineNuxtRouteMiddleware(async (to) => {
-  const user = useSupabaseUser();
-  const publicPaths = ["/login", "/confirm"];
+  // 回答者向け公開ルート
+  if (to.path.startsWith("/assessment/")) return;
 
+  // 認証関連の公開ルート
+  const publicPaths = ["/login", "/confirm"];
   if (publicPaths.includes(to.path)) return;
 
+  const user = useSupabaseUser();
   if (!user.value) {
     return navigateTo("/login");
   }
 
-  // /admin 配下は is_admin をチェック
-  if (to.path.startsWith("/admin")) {
-    const { refresh, isAdmin } = useIsAdmin();
-    await refresh();
-    if (!isAdmin.value) {
-      return navigateTo("/");
-    }
+  // admin 配下と / は admin 限定
+  const { refresh, isAdmin } = useIsAdmin();
+  await refresh();
+  if (!isAdmin.value) {
+    return navigateTo("/login");
   }
 });

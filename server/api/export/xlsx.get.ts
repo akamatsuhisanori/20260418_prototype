@@ -14,7 +14,8 @@ export default defineEventHandler(async (event) => {
 
   const { data: rows, error } = await admin
     .from("responses")
-    .select("user_id, data, profiles:profiles!inner(email)")
+    .select("label, access_token, data")
+    .eq("is_revoked", false)
     .order("updated_at", { ascending: false });
 
   if (error) {
@@ -42,9 +43,7 @@ export default defineEventHandler(async (event) => {
 
   for (const row of rows ?? []) {
     const d = (row.data as AssessmentState) || null;
-    const email = Array.isArray(row.profiles)
-      ? (row.profiles[0] as any)?.email
-      : (row.profiles as any)?.email;
+    const respondent = row.label || `token:${row.access_token.slice(0, 8)}`;
     if (!d) continue;
 
     // Sheet 1
@@ -56,7 +55,7 @@ export default defineEventHandler(async (event) => {
         const formation =
           (dims.reduce((a, x) => a + (dm[x.id] ?? 0), 0) / (dims.length * 10)) * 100;
         orgRows.push([
-          email,
+          respondent,
           name,
           phase === "past" ? "過去" : "現在",
           // org-level Qs are not captured in current UI — leave blank
@@ -75,7 +74,7 @@ export default defineEventHandler(async (event) => {
       d.orgs.past.filter(Boolean)[0] ?? d.orgs.current.filter(Boolean)[0] ?? "";
     for (const dim of dims) {
       identityRows.push([
-        email,
+        respondent,
         targetOrg,
         dim.label,
         dim.rbs,
@@ -89,7 +88,7 @@ export default defineEventHandler(async (event) => {
     const selectedLabel = dims.find((x) => x.id === selectedDim)?.label ?? selectedDim;
     for (const q of dialogues) {
       dialogueRows.push([
-        email,
+        respondent,
         selectedLabel,
         q.label,
         d.dialogue[`step5:dialogue:${selectedDim}:${q.id}:past`] ?? "",
@@ -100,21 +99,21 @@ export default defineEventHandler(async (event) => {
 
     // Sheet 4
     actionRows.push([
-      email,
+      respondent,
       CONTENT.excel.actionRows.craftExperiments,
       d.actions.craftExperiments ?? "",
     ]);
     actionRows.push([
-      email,
+      respondent,
       CONTENT.excel.actionRows.shiftConnections,
       d.actions.shiftConnections ?? "",
     ]);
     actionRows.push([
-      email,
+      respondent,
       CONTENT.excel.actionRows.makeSense,
       d.actions.makeSense ?? "",
     ]);
-    actionRows.push([email, CONTENT.excel.weeklyRowLabel, d.dialogue["step5:week"] ?? ""]);
+    actionRows.push([respondent, CONTENT.excel.weeklyRowLabel, d.dialogue["step5:week"] ?? ""]);
   }
 
   const wb = XLSX.utils.book_new();
