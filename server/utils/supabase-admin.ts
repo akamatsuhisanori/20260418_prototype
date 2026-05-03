@@ -3,8 +3,9 @@
 //   service_role key を使った Supabase クライアントを作る。
 //   これはサーバー側でしか使ってはいけない（RLS をバイパスするため）。
 //
-//   runtimeConfig.supabaseServiceRoleKey は Nuxt の server-only。
-//   SUPABASE_SERVICE_ROLE_KEY 環境変数から Vercel 側でセットする。
+//   env:
+//     SUPABASE_URL                — anon と共用
+//     SUPABASE_SERVICE_ROLE_KEY   — server only
 // ============================================================
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "~/types/database.types";
@@ -14,10 +15,24 @@ let cached: SupabaseClient<Database> | null = null;
 export const getSupabaseAdmin = (): SupabaseClient<Database> => {
   if (cached) return cached;
   const config = useRuntimeConfig();
-  const url = process.env.SUPABASE_URL;
-  const key = config.supabaseServiceRoleKey;
-  if (!url) throw new Error("SUPABASE_URL が未設定です");
-  if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY が未設定です");
+  const url = process.env.SUPABASE_URL || (config as any).public?.supabase?.url || "";
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    (config.supabaseServiceRoleKey as string) ||
+    "";
+  if (!url) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: "config: SUPABASE_URL が未設定です",
+    });
+  }
+  if (!key) {
+    throw createError({
+      statusCode: 500,
+      statusMessage:
+        "config: SUPABASE_SERVICE_ROLE_KEY が未設定です（Vercel 環境変数を確認）",
+    });
+  }
   cached = createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -36,8 +51,18 @@ export const requireAdmin = async (event: import("h3").H3Event) => {
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
-  if (error || data?.role !== "admin") {
-    throw createError({ statusCode: 403, statusMessage: "管理者のみアクセス可能です" });
+  if (error) {
+    console.error("[requireAdmin] profiles lookup error:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: `requireAdmin db: ${error.message}`,
+    });
+  }
+  if (data?.role !== "admin") {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "管理者のみアクセス可能です",
+    });
   }
   return user;
 };
