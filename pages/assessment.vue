@@ -6,6 +6,10 @@ import { CONTENT } from "~/content/assessment";
 const { state, load, mutate, submitted } = useAssessmentState();
 await load();
 
+// /assessment にアクセスするたびに開始画面 (Step 0) に戻す。
+// 直接代入なので DB には書き込まず、ユーザーが「開始」を押した時点で保存される。
+state.value.meta.step = 0;
+
 const step = computed({
   get: () => state.value.meta.step,
   set: (v: number) =>
