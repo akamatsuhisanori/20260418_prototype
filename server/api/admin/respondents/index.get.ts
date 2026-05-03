@@ -14,7 +14,12 @@ export default defineEventHandler(async (event) => {
     )
     .order("started_at", { ascending: false });
   if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message });
+    console.error("[GET /api/admin/respondents] supabase error:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: `db: ${error.message}`,
+      data: { code: error.code, details: error.details, hint: error.hint },
+    });
   }
   return data ?? [];
 });

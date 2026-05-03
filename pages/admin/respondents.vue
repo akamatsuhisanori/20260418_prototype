@@ -23,6 +23,7 @@ const list = ref<Row[]>([]);
 const newLabel = ref("");
 const loading = ref(false);
 const lastCreated = ref<Row | null>(null);
+const loadError = ref<string>("");
 
 const origin = computed(() =>
   typeof window !== "undefined" ? window.location.origin : "",
@@ -40,7 +41,22 @@ const statusOf = (row: Row) => {
 };
 
 const load = async () => {
-  list.value = await $fetch<Row[]>("/api/admin/respondents");
+  loadError.value = "";
+  try {
+    list.value = await $fetch<Row[]>("/api/admin/respondents");
+  } catch (e: any) {
+    const msg =
+      e?.data?.statusMessage ||
+      e?.data?.message ||
+      e?.statusMessage ||
+      e?.message ||
+      "unknown error";
+    const detail = e?.data?.data
+      ? ` (${JSON.stringify(e.data.data)})`
+      : "";
+    loadError.value = `${msg}${detail}`;
+    console.error("[load /api/admin/respondents]", e);
+  }
 };
 
 await load();
@@ -94,6 +110,12 @@ const remove = async (id: string) => {
         ← 管理画面
       </NuxtLink>
     </header>
+
+    <AppCard v-if="loadError" soft>
+      <p class="small" style="color: var(--danger)">
+        読み込みエラー: {{ loadError }}
+      </p>
+    </AppCard>
 
     <AppCard>
       <h3>新規発行</h3>
