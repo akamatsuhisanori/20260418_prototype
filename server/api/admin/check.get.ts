@@ -3,6 +3,7 @@
 //   クライアントから現在のユーザが admin か手軽に確認するため。
 //   server 側で profiles.role を引く（RLS を気にせずに済む）。
 // ============================================================
+import { serverSupabaseUser } from "#supabase/server";
 import { getSupabaseAdmin } from "~/server/utils/supabase-admin";
 
 export default defineEventHandler(async (event) => {

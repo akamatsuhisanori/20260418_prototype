@@ -8,6 +8,7 @@
 //     SUPABASE_SERVICE_ROLE_KEY   — server only
 // ============================================================
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { serverSupabaseUser } from "#supabase/server";
 import type { Database } from "~/types/database.types";
 
 let cached: SupabaseClient<Database> | null = null;
