@@ -71,9 +71,16 @@ const createNew = async () => {
     lastCreated.value = created;
     newLabel.value = "";
     await load();
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
-    alert("発行に失敗しました");
+    const msg =
+      e?.data?.statusMessage ||
+      e?.data?.message ||
+      e?.statusMessage ||
+      e?.message ||
+      "unknown";
+    const detail = e?.data?.data ? `\n${JSON.stringify(e.data.data)}` : "";
+    alert(`発行に失敗しました\n${msg}${detail}`);
   } finally {
     loading.value = false;
   }
