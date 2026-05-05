@@ -78,6 +78,12 @@ export interface AssessmentState {
   // false = 自動選定、true = ユーザが手動で選び直した
   selectedOrgManual: boolean;
 
+  // ---------- ブロック 3 ----------
+  // 選んだ写真について書き出す（何が映っているか / 場所 / 状況 / 人 / 気持ち）
+  block3: {
+    photoDescription: string;
+  };
+
   // ---------- ブロック 4 ----------
   block4: Triad;
 

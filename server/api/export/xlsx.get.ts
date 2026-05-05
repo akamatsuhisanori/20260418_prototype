@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
     ]).flat(),
     "重要組織_名前",
     "重要組織_選定方法",
+    "B3_写真の説明",
     ...AXIS_KEYS.flatMap((k) => [`B4_${k}_詳細`, `B4_${k}_一言`]),
     "B5_核",
     ...AXIS_KEYS.map((k) => `B6_現在_${k}_ナラティブ`),
@@ -84,6 +85,7 @@ export default defineEventHandler(async (event) => {
     const sel = orgs.find((o) => o.id === d.selectedOrgId) ?? null;
     cells.push(sel?.name ?? "");
     cells.push(d.selectedOrgManual ? "手動" : sel ? "自動" : "");
+    cells.push(d.block3?.photoDescription ?? "");
     for (const k of AXIS_KEYS) {
       cells.push(d.block4?.[k]?.detail ?? "");
       cells.push(d.block4?.[k]?.summary ?? "");

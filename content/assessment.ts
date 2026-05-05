@@ -196,6 +196,16 @@ export const CONTENT = {
     instructionPhotoEmph: "最も表現する写真",
     instructionTail: "」を 1 枚、手元のスマートフォンで選んでください。",
     nextLabel: "写真を選び終わったら次へ →",
+
+    // 写真の説明（subStep 1）
+    describeTitle: "選んだ写真について書き出す",
+    describeIntro: "選んだ写真を見ながら、次の問いに答えてください。",
+    describeQuestion: "何が映っている写真を選択しましたか？",
+    describeHint:
+      "（どこで撮影された写真か、どのようなシーンの写真か、誰が映っているか、どのような気持ちか）",
+    describePlaceholder: "写真について自由に書いてください...",
+    describeMaxLength: 600,
+    describeNextLabel: "次へ：3 軸で書き出す →",
   },
 
   // ============================================================
