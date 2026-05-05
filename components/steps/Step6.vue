@@ -1,14 +1,14 @@
 <script setup lang="ts">
 // ============================================================
-// ブロック 6：9 マス + ギャップ判定 + 行動設計
+// ブロック 6：9 マスを完成させる → ギャップ判定 → 行動設計
 //   subStep:
-//     0: 6-1a 現在の 3 軸を書く（ナラティブのみ）
-//     1: 6-1b 未来の 3 軸を書く（ナラティブのみ）
-//     2: 6-2 9 マス俯瞰 + ギャップ判定
-//     3: 6-3 ギャップを近づける行動を入力（ギャップ「ある」のみ）
+//     0: 9 マス入力（過去はブロック 4 の一言を読み取り専用、
+//                    現在・未来は各セルに直接ナラティブを入力）
+//     1: ギャップ判定
+//     2: 行動設計（ギャップ「ある」のみ）
 //
 //   過去：ブロック 4 で書いた「一言」を 9 マスに表示
-//   現在・未来：ナラティブ（詳細記述）のみを入力。9 マスでは要約表示。
+//   現在・未来：ナラティブ（詳細記述）のみを入力
 // ============================================================
 import { CONTENT, AXIS_KEYS, type AxisKey } from "~/content/assessment";
 
@@ -42,13 +42,13 @@ const setAction = (key: AxisKey, v: string) =>
     s.block6.gaps[key].action = v.slice(0, CONTENT.block6.actionMaxLength);
   });
 
-const phaseDetailsFilled = (phase: "current" | "future") =>
+const matrixFilled = computed(() =>
   AXIS_KEYS.every(
-    (k) => state.value.block6[phase][k].detail.trim().length > 0,
-  );
-
-const currentFilled = computed(() => phaseDetailsFilled("current"));
-const futureFilled = computed(() => phaseDetailsFilled("future"));
+    (k) =>
+      state.value.block6.current[k].detail.trim().length > 0 &&
+      state.value.block6.future[k].detail.trim().length > 0,
+  ),
+);
 const gapsAnswered = computed(() =>
   AXIS_KEYS.every((k) => state.value.block6.gaps[k].hasGap !== null),
 );
@@ -69,123 +69,109 @@ const finish = async () => {
   if (ok) emit("next");
   else alert("送信に失敗しました。もう一度お試しください。");
 };
-
-// 過去はブロック 4 の「一言」、現在／未来はナラティブを短く要約表示
-const truncate = (s: string, n: number) =>
-  s.length > n ? s.slice(0, n) + "…" : s;
-
-const cellLabel = (
-  phase: "past" | "current" | "future",
-  key: AxisKey,
-): string => {
-  if (phase === "past") {
-    return state.value.block4[key].summary || "（未入力）";
-  }
-  const detail = state.value.block6[phase][key].detail;
-  return detail ? truncate(detail, 40) : "（未入力）";
-};
 </script>
 
 <template>
   <AppCard>
     <h2>{{ CONTENT.block6.title }}</h2>
 
-    <!-- ============ subStep 0: 現在の 3 軸 ============ -->
+    <!-- ============ subStep 0: 9 マス入力 ============ -->
     <template v-if="subStep === 0">
-      <h3>{{ CONTENT.block6.currentTitle }}</h3>
-      <p class="muted">{{ CONTENT.block6.currentIntro }}</p>
+      <h3>{{ CONTENT.block6.matrixTitle }}</h3>
+      <p class="muted">{{ CONTENT.block6.matrixIntro }}</p>
 
-      <div
-        v-for="key in AXIS_KEYS"
-        :key="`cur-${key}`"
-        class="card card--soft"
-        style="margin-top: 16px"
-      >
-        <h3>{{ CONTENT.block6.axisLabels[key] }}</h3>
-        <p class="small muted">{{ CONTENT.block6.currentQuestions[key] }}</p>
-        <textarea
-          :value="state.block6.current[key].detail"
-          :placeholder="CONTENT.block6.detailPlaceholder"
-          :maxlength="CONTENT.block6.detailMaxLength"
-          @input="setDetail('current', key, ($event.target as HTMLTextAreaElement).value)"
-        />
-        <p class="tiny muted">
-          {{ state.block6.current[key].detail.length }} / {{ CONTENT.block6.detailMaxLength }} 字
+      <!-- ブロック 5 のおさらい：3 軸の一言 + 統合した核 -->
+      <div class="card card--soft" style="margin-top: 12px">
+        <strong>{{ CONTENT.block6.block5RecallTitle }}</strong>
+        <ul style="margin: 8px 0 0 16px; padding: 0">
+          <li v-for="key in AXIS_KEYS" :key="`recall-${key}`">
+            <span class="small muted">{{ CONTENT.block6.axisLabels[key] }}：</span>
+            <strong>「{{ state.block4[key].summary || "（未入力）" }}」</strong>
+          </li>
+        </ul>
+        <p style="margin-top: 12px">
+          <span class="small muted">{{ CONTENT.block6.coreLabel }}：</span><br />
+          <strong>{{ state.coreStatement || "（未入力）" }}</strong>
         </p>
+      </div>
+
+      <!-- 9 マスグリッド -->
+      <div class="matrix">
+        <!-- ヘッダ行 -->
+        <div class="matrix__head"></div>
+        <div
+          v-for="key in AXIS_KEYS"
+          :key="`h-${key}`"
+          class="matrix__head"
+        >
+          {{ CONTENT.block6.axisLabels[key] }}
+        </div>
+
+        <!-- 過去 -->
+        <div class="matrix__rowhead">{{ CONTENT.block6.rowLabels.past }}</div>
+        <div
+          v-for="key in AXIS_KEYS"
+          :key="`past-${key}`"
+          class="matrix__cell matrix__cell--past"
+        >
+          {{ state.block4[key].summary || "（未入力）" }}
+        </div>
+
+        <!-- 現在 -->
+        <div class="matrix__rowhead">{{ CONTENT.block6.rowLabels.current }}</div>
+        <div
+          v-for="key in AXIS_KEYS"
+          :key="`cur-${key}`"
+          class="matrix__cell"
+        >
+          <p class="tiny muted" style="margin: 0 0 4px">
+            {{ CONTENT.block6.currentQuestions[key] }}
+          </p>
+          <textarea
+            :value="state.block6.current[key].detail"
+            :placeholder="CONTENT.block6.detailPlaceholder"
+            :maxlength="CONTENT.block6.detailMaxLength"
+            @input="setDetail('current', key, ($event.target as HTMLTextAreaElement).value)"
+          />
+        </div>
+
+        <!-- 未来 -->
+        <div class="matrix__rowhead" style="white-space: pre-line">{{ CONTENT.block6.rowLabels.future }}</div>
+        <div
+          v-for="key in AXIS_KEYS"
+          :key="`fut-${key}`"
+          class="matrix__cell"
+        >
+          <p class="tiny muted" style="margin: 0 0 4px">
+            {{ CONTENT.block6.futureQuestions[key] }}
+          </p>
+          <textarea
+            :value="state.block6.future[key].detail"
+            :placeholder="CONTENT.block6.detailPlaceholder"
+            :maxlength="CONTENT.block6.detailMaxLength"
+            @input="setDetail('future', key, ($event.target as HTMLTextAreaElement).value)"
+          />
+        </div>
       </div>
 
       <NavButtons
         can-back
         can-next
-        :next-disabled="!currentFilled"
+        :next-disabled="!matrixFilled"
         @back="emit('back')"
         @next="subStep = 1"
       />
     </template>
 
-    <!-- ============ subStep 1: 未来の 3 軸 ============ -->
+    <!-- ============ subStep 1: ギャップ判定 ============ -->
     <template v-else-if="subStep === 1">
-      <h3>{{ CONTENT.block6.futureTitle }}</h3>
-      <p class="muted">{{ CONTENT.block6.futureIntro }}</p>
+      <h3>{{ CONTENT.block6.gapTitle }}</h3>
 
       <div class="card card--soft" style="margin-top: 12px">
-        <p class="small muted">あなたの核（ブロック 5）</p>
-        <p style="margin: 0"><strong>{{ state.coreStatement || "（未入力）" }}</strong></p>
-      </div>
-
-      <div
-        v-for="key in AXIS_KEYS"
-        :key="`fut-${key}`"
-        class="card card--soft"
-        style="margin-top: 16px"
-      >
-        <h3>{{ CONTENT.block6.axisLabels[key] }}</h3>
-        <p class="small muted">{{ CONTENT.block6.futureQuestions[key] }}</p>
-        <textarea
-          :value="state.block6.future[key].detail"
-          :placeholder="CONTENT.block6.detailPlaceholder"
-          :maxlength="CONTENT.block6.detailMaxLength"
-          @input="setDetail('future', key, ($event.target as HTMLTextAreaElement).value)"
-        />
-        <p class="tiny muted">
-          {{ state.block6.future[key].detail.length }} / {{ CONTENT.block6.detailMaxLength }} 字
-        </p>
-      </div>
-
-      <NavButtons
-        can-back
-        can-next
-        :next-disabled="!futureFilled"
-        @back="subStep = 0"
-        @next="subStep = 2"
-      />
-    </template>
-
-    <!-- ============ subStep 2: 9 マス + ギャップ判定 ============ -->
-    <template v-else-if="subStep === 2">
-      <h3>あなたの 9 マスが完成しました</h3>
-
-      <table class="table" style="margin-top: 12px">
-        <thead>
-          <tr>
-            <th></th>
-            <th v-for="h in CONTENT.block6.matrixHeaders" :key="h">{{ h }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="key in AXIS_KEYS" :key="`row-${key}`">
-            <th>{{ CONTENT.block6.axisLabels[key] }}</th>
-            <td><strong>{{ cellLabel('past', key) }}</strong></td>
-            <td>{{ cellLabel('current', key) }}</td>
-            <td>{{ cellLabel('future', key) }}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="card card--soft" style="margin-top: 16px">
         <p
           v-for="(line, i) in CONTENT.block6.gapInstruction"
           :key="i"
+          style="margin: 0 0 4px"
         >
           {{ line }}
         </p>
@@ -230,12 +216,12 @@ const cellLabel = (
         can-back
         can-next
         :next-disabled="!gapsAnswered"
-        @back="subStep = 1"
-        @next="subStep = 3"
+        @back="subStep = 0"
+        @next="subStep = 2"
       />
     </template>
 
-    <!-- ============ subStep 3: 行動設計 ============ -->
+    <!-- ============ subStep 2: 行動設計 ============ -->
     <template v-else>
       <h3>{{ CONTENT.block6.actionTitle }}</h3>
 
@@ -280,7 +266,7 @@ const cellLabel = (
         can-next
         :next-disabled="!actionsFilled || submitting"
         :next-label="submitting ? CONTENT.block6.submitting : CONTENT.block6.nextLabel"
-        @back="subStep = 2"
+        @back="subStep = 1"
         @next="finish"
       />
     </template>

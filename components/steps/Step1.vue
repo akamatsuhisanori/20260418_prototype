@@ -3,19 +3,19 @@
 // ブロック 1：過去・現在の所属組織を棚卸し
 //   - 最大 8 個まで追加
 //   - 名前 + 過去/現在タグを必須入力
-//   - 年代ヒントは折りたたみ可能（デフォルト展開）
+//   - 年代ヒント・固有名詞についての注釈は折りたたみ可能
+//   - 現在組織が 0 件で「次へ」を押した時はカスタムモーダルで確認
 // ============================================================
 import { CONTENT } from "~/content/assessment";
-import type { Organization } from "~/types/database.types";
 
 const emit = defineEmits<{ (e: "back"): void; (e: "next"): void }>();
 const { state, mutate } = useAssessmentState();
 
 const hintOpen = ref(true);
+const showCurrentZeroModal = ref(false);
 
 const orgs = computed(() => state.value.organizations);
 
-// 新規 ID は max(id)+1
 const nextId = () => {
   const ids = orgs.value.map((o) => o.id);
   return ids.length === 0 ? 1 : Math.max(...ids) + 1;
@@ -28,7 +28,6 @@ const addOrg = () => {
   });
 };
 
-// 初期表示時、空なら 1 行追加しておく
 onMounted(() => {
   if (orgs.value.length === 0) addOrg();
 });
@@ -48,7 +47,6 @@ const setTag = (id: number, tag: "past" | "current") =>
 const removeOrg = (id: number) =>
   mutate((s) => {
     s.organizations = s.organizations.filter((o) => o.id !== id);
-    // 関連する scores も消す
     delete s.scores[String(id)];
     if (s.selectedOrgId === id) {
       s.selectedOrgId = null;
@@ -76,9 +74,19 @@ const canProceed = computed(
 const tryNext = () => {
   if (!canProceed.value) return;
   if (currentCount.value === 0) {
-    if (!confirm(CONTENT.block1.warningCurrentZero)) return;
+    showCurrentZeroModal.value = true;
+    return;
   }
   emit("next");
+};
+
+const modalProceed = () => {
+  showCurrentZeroModal.value = false;
+  emit("next");
+};
+const modalGoBack = () => {
+  showCurrentZeroModal.value = false;
+  // 1 行目に「現在」のラジオを優先選択するためのソフトな誘導：何もしない（モーダルを閉じるだけ）
 };
 </script>
 
@@ -103,6 +111,19 @@ const tryNext = () => {
           <div class="small muted">{{ g.examples }}</div>
         </div>
       </div>
+    </div>
+
+    <!-- 固有名詞についての注釈 -->
+    <div class="card card--soft" style="margin-top: 12px">
+      <strong>{{ CONTENT.block1.properNounNote.title }}</strong>
+      <p class="small" style="margin-top: 8px">
+        {{ CONTENT.block1.properNounNote.body }}
+      </p>
+      <ul class="small muted" style="margin: 4px 0 0 16px; padding: 0">
+        <li v-for="(ex, i) in CONTENT.block1.properNounNote.examples" :key="i">
+          {{ ex }}
+        </li>
+      </ul>
     </div>
 
     <!-- 入力欄 -->
@@ -197,4 +218,30 @@ const tryNext = () => {
       @next="tryNext"
     />
   </AppCard>
+
+  <!-- 「現在」が 0 件のときに表示する確認モーダル -->
+  <Teleport to="body">
+    <div
+      v-if="showCurrentZeroModal"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      @click.self="modalGoBack"
+    >
+      <div class="modal">
+        <h3>{{ CONTENT.block1.confirmCurrentZeroTitle }}</h3>
+        <p>{{ CONTENT.block1.confirmCurrentZeroBody }}</p>
+        <div class="btn-row">
+          <button type="button" class="btn" @click="modalGoBack">
+            {{ CONTENT.block1.confirmCurrentZeroBack }}
+          </button>
+          <div class="btn-right">
+            <button type="button" class="btn btn--primary" @click="modalProceed">
+              {{ CONTENT.block1.confirmCurrentZeroProceed }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>

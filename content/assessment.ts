@@ -6,7 +6,8 @@
 
 export type AxisKey = "who" | "why" | "what";
 
-export const AXIS_KEYS: AxisKey[] = ["who", "why", "what"];
+// 表示順序：Why → What → Who/Where（仕様書 v1.1）
+export const AXIS_KEYS: AxisKey[] = ["why", "what", "who"];
 
 export const CONTENT = {
   app: {
@@ -18,7 +19,7 @@ export const CONTENT = {
   nav: {
     back: "← 戻る",
     next: "次へ →",
-    progressLabels: ["棚卸し", "測定", "写真", "言語化", "核", "9マス"],
+    progressLabels: ["棚卸し", "測定", "写真", "言語化", "核", "比較"],
   },
   auth: {
     loginTitle: "ログイン",
@@ -40,9 +41,9 @@ export const CONTENT = {
       ["🏢", "ブロック 1", "過去・現在の所属組織を棚卸し"],
       ["📊", "ブロック 2", "各組織との同一化スコアを測定し、重要組織を特定"],
       ["📷", "ブロック 3", "重要組織での自分を表す写真を選ぶ"],
-      ["✍️", "ブロック 4", "Who / Why / What の3軸で当時の自分を言語化"],
+      ["✍️", "ブロック 4", "Why / What / Who/Where の3軸で当時の自分を言語化"],
       ["💎", "ブロック 5", "3軸を統合した「核」を一文に言語化"],
-      ["🗺️", "ブロック 6", "9マスを完成させてギャップを近づける行動を設計"],
+      ["🗺️", "ブロック 6", "現在、過去、未来の比較で今後の行動を考える"],
     ] as const,
     startButton: "はじめる →",
     continueButton: "続きから →",
@@ -85,6 +86,19 @@ export const CONTENT = {
     inputDescription: "最大 8 個まで追加できます。",
     requiredCurrentNote:
       "※ このワークでは「現在所属している組織」も必ず 1 つ以上入力してください。",
+    properNounNote: {
+      title: "💡 組織名の書き方について",
+      body: "組織名は固有名詞を入力しないようにしてください。",
+      examples: [
+        "例）○○株式会社のXX部 → 新卒で入社した会社のXXの部署",
+        "例）■■大学の△△部 → 大学の△△部 など",
+      ],
+    },
+    confirmCurrentZeroTitle: "現在の所属組織が未入力です",
+    confirmCurrentZeroBody:
+      "このワークでは「現在所属している組織」も入力することを推奨しています。どうしますか？",
+    confirmCurrentZeroBack: "現在の所属組織を入力に戻る",
+    confirmCurrentZeroProceed: "そのまま進む",
     namePlaceholder: "組織名（50字以内）",
     nameMaxLength: 50,
     pastLabel: "過去",
@@ -94,8 +108,6 @@ export const CONTENT = {
     countLabel: (n: number, max: number) => `合計：${n} / ${max} 個`,
     maxOrgs: 8,
     warningTagMissing: "過去／現在のいずれかを選択してください。",
-    warningCurrentZero:
-      "現在所属している組織が入力されていませんが、進めてよろしいですか？",
     warningPastZero:
       "過去に所属していた組織が入力されていません。現在の組織を対象として進めます。",
     nextLabel: "次へ：同一化スコアの測定 →",
@@ -177,8 +189,12 @@ export const CONTENT = {
   // ============================================================
   block3: {
     title: "ブロック 3：写真を選ぶ",
-    instruction: (orgName: string) =>
-      `${orgName} のあなたを最も表現する写真を 1 枚、手元のスマートフォンで選んでください。`,
+    // テンプレート側で強調表示するため、パーツに分解して提供する。
+    instructionLead: "「",
+    instructionOrgYouSuffix: "のあなた",
+    instructionMid: "を",
+    instructionPhotoEmph: "最も表現する写真",
+    instructionTail: "」を 1 枚、手元のスマートフォンで選んでください。",
     nextLabel: "写真を選び終わったら次へ →",
   },
 
@@ -197,23 +213,26 @@ export const CONTENT = {
     detailPlaceholder: "詳しく書いてみてください...",
     summaryPlaceholder: "一言で表現すると...",
     axes: {
-      who: {
-        label: "Who（関係性）",
-        question:
-          "その時、あなたはどんな人たちに囲まれていましたか？ あなたにとってどのような居場所でしたか？",
-        examples: "例：「勝利を共有する仲間」「お互いを深く知る少人数の戦友」",
-      },
       why: {
         label: "Why（目的）",
         question:
           "その時、あなたは何に向かって頑張っていましたか？ 何を実現したくてその場にいましたか？",
-        examples: "例：「最前線で世の中を伝える」「チームを最高の状態に導く」",
+        examples:
+          "例：「世の中にまだない価値を生み出したかった」「目の前の一人の役に立ちたかった」「自分の専門性を一人前まで磨き上げたかった」",
       },
       what: {
         label: "What（行動）",
         question:
           "その時、あなたは具体的に何をしていましたか？ どんな振る舞いをする自分でしたか？",
-        examples: "例：「最前線で働く戦闘員」「縁の下の力持ち」",
+        examples:
+          "例：「常に新しい問いを立てて試し続ける人」「細部を丁寧に整え続ける人」「人と人の間に立って調整する人」",
+      },
+      who: {
+        label: "Who/Where（関係性・場所）",
+        question:
+          "その時、あなたはどんな人たちに囲まれていましたか？ あなたにとってどのような居場所でしたか？",
+        examples:
+          "例：「厳しさと温かさで導く先輩のもとで安心して挑戦できた場」「目標に挑む仲間を全力で支える、自分が活きた居場所」「背中を預け合える仲間たちと立つ最前線のような場所」",
       },
     } as const,
     summaryRequiredWarning:
@@ -245,38 +264,45 @@ export const CONTENT = {
     inputLabel: "あなたの核",
     placeholder: "（100 字以内）",
     maxLength: 100,
-    nextLabel: "次へ：9 マスを完成させる →",
+    nextLabel: "次へ：現在・未来を書く →",
   },
 
   // ============================================================
   // ブロック 6: 9マス + ギャップ判定 + 行動設計
   // ============================================================
   block6: {
-    title: "ブロック 6：9 マスでギャップを近づける行動を設計",
+    title: "ブロック 6：現在、過去、未来の比較で今後の行動を考える",
     matrixHeaders: ["過去", "現在", "未来（1 年後）"],
     axisLabels: {
-      who: "Who（関係性）",
       why: "Why（目的）",
       what: "What（行動）",
+      who: "Who/Where（関係性・場所）",
     } as const,
 
-    // 6-1a: 現在
-    currentTitle: "今のあなたを 3 軸で書く",
-    currentIntro: "今のあなたについて、同じ 3 つの軸で書いてください。",
+    // ブロック 5 の振り返り（9 マス画面の上部に表示）
+    block5RecallTitle: "ブロック 4 ・ 5 で書いたあなたの軸",
+    coreLabel: "あなたの核（ブロック 5）",
+
+    // 9 マス画面（matrixTitle）
+    matrixTitle: "9 マスを完成させる",
+    matrixIntro:
+      "過去のセルにはブロック 4 で書いた一言が入っています。現在と未来のセルに、それぞれの軸の状態を書いてください。",
+    rowLabels: {
+      past: "過去",
+      current: "現在",
+      future: "未来\n(1 年後)",
+    } as const,
+
+    // 質問文（セル下のヒントとして使う）
     currentQuestions: {
-      who: "今、あなたはどんな人たちに囲まれていますか？ あなたにとってどのような居場所ですか？",
       why: "今、あなたは何に向かって働いていますか？",
       what: "今、あなたは具体的に何をしていますか？",
+      who: "今、あなたはどんな人たちに囲まれていますか？ どのような居場所ですか？",
     } as const,
-
-    // 6-1b: 未来
-    futureTitle: "1 年後のあなたを 3 軸で書く",
-    futureIntro:
-      "過去と現在の 3 軸を見渡してください。ブロック 5 で言葉にしたあなたの核を、1 年後のあなたが今の場所で発揮しているとしたら、どんな 3 軸になっていますか？",
     futureQuestions: {
-      who: "1 年後、あなたはどんな人たちに囲まれていたいですか？ どのような居場所を作っていたいですか？",
       why: "1 年後、あなたは何に向かって働いていたいですか？",
       what: "1 年後、あなたは具体的に何をしていたいですか？",
+      who: "1 年後、あなたはどんな人たちに囲まれていたいですか？ どのような居場所を作っていたいですか？",
     } as const,
 
     detailMaxLength: 300,

@@ -238,3 +238,84 @@ textarea { min-height: 96px; resize: vertical; }
 .grow { flex: 1; }
 
 .hidden { display: none !important; }
+
+/* -------- emphasis (Block 3, etc) -------- */
+.accent {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* -------- modal -------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.modal {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+  max-width: 480px;
+  width: 100%;
+  padding: 24px;
+}
+.modal h3 { margin-top: 0; }
+.modal .btn-row { margin-top: 16px; }
+
+/* -------- 9-cell matrix grid (Block 6) -------- */
+.matrix {
+  display: grid;
+  grid-template-columns: 80px repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+.matrix__head {
+  background: var(--card-soft);
+  padding: 10px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  color: var(--text-soft);
+  text-align: center;
+  font-size: 13px;
+}
+.matrix__rowhead {
+  background: var(--card-soft);
+  padding: 10px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  color: var(--text-soft);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.matrix__cell {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  min-height: 100px;
+}
+.matrix__cell--past {
+  background: var(--card-soft);
+  font-weight: 600;
+}
+.matrix__cell textarea {
+  min-height: 80px;
+  font-size: 13px;
+}
+@media (max-width: 720px) {
+  .matrix {
+    grid-template-columns: 1fr;
+  }
+  .matrix__head, .matrix__rowhead {
+    text-align: left;
+    justify-content: flex-start;
+  }
+}
