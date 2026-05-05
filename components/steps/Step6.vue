@@ -167,7 +167,48 @@ const finish = async () => {
     <template v-else-if="subStep === 1">
       <h3>{{ CONTENT.block6.gapTitle }}</h3>
 
-      <div class="card card--soft" style="margin-top: 12px">
+      <!-- 9 マスの結果を読み取り専用で再掲 -->
+      <div class="matrix" style="margin-top: 12px">
+        <div class="matrix__head"></div>
+        <div
+          v-for="key in AXIS_KEYS"
+          :key="`gap-h-${key}`"
+          class="matrix__head"
+        >
+          {{ CONTENT.block6.axisLabels[key] }}
+        </div>
+
+        <div class="matrix__rowhead">{{ CONTENT.block6.rowLabels.past }}</div>
+        <div
+          v-for="key in AXIS_KEYS"
+          :key="`gap-past-${key}`"
+          class="matrix__cell matrix__cell--past"
+        >
+          {{ state.block4[key].summary || "（未入力）" }}
+        </div>
+
+        <div class="matrix__rowhead">{{ CONTENT.block6.rowLabels.current }}</div>
+        <div
+          v-for="key in AXIS_KEYS"
+          :key="`gap-cur-${key}`"
+          class="matrix__cell"
+          style="white-space: pre-wrap"
+        >
+          {{ state.block6.current[key].detail || "（未入力）" }}
+        </div>
+
+        <div class="matrix__rowhead" style="white-space: pre-line">{{ CONTENT.block6.rowLabels.future }}</div>
+        <div
+          v-for="key in AXIS_KEYS"
+          :key="`gap-fut-${key}`"
+          class="matrix__cell"
+          style="white-space: pre-wrap"
+        >
+          {{ state.block6.future[key].detail || "（未入力）" }}
+        </div>
+      </div>
+
+      <div class="card card--soft" style="margin-top: 16px">
         <p
           v-for="(line, i) in CONTENT.block6.gapInstruction"
           :key="i"
