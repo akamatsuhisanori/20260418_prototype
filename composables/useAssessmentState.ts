@@ -18,7 +18,7 @@ export const EMPTY_STATE = (): AssessmentState => ({
   scores: {},
   selectedOrgId: null,
   selectedOrgManual: false,
-  block3: { photoDescription: "" },
+  block3: { photoDescription: "", photoReason: "", photoHesitation: 0 },
   block4: EMPTY_TRIAD(),
   coreStatement: "",
   block6: {
@@ -51,6 +51,14 @@ const normalize = (loaded: Partial<AssessmentState> | null | undefined): Assessm
         typeof loaded.block3?.photoDescription === "string"
           ? loaded.block3.photoDescription
           : "",
+      photoReason:
+        typeof loaded.block3?.photoReason === "string"
+          ? loaded.block3.photoReason
+          : "",
+      photoHesitation:
+        typeof loaded.block3?.photoHesitation === "number"
+          ? loaded.block3.photoHesitation
+          : 0,
     },
     block4: { ...base.block4, ...(loaded.block4 ?? {}) },
     coreStatement: typeof loaded.coreStatement === "string" ? loaded.coreStatement : "",

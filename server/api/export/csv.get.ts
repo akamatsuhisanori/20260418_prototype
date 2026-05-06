@@ -42,8 +42,10 @@ export default defineEventHandler(async (event) => {
     // ブロック 2: 重要組織の確定
     "重要組織_名前",
     "重要組織_選定方法",
-    // ブロック 3: 写真の説明
+    // ブロック 3: 写真の説明・選んだ理由・迷った度合い
     "B3_写真の説明",
+    "B3_選んだ理由",
+    "B3_迷った度合い(1-7)",
     // ブロック 4: 3 軸（Who/Why/What）
     ...AXIS_KEYS.flatMap((k) => [
       `B4_${k}_詳細`,
@@ -103,6 +105,8 @@ export default defineEventHandler(async (event) => {
     cells.push(d.selectedOrgManual ? "手動" : sel ? "自動" : "");
     // ブロック 3
     cells.push(d.block3?.photoDescription ?? "");
+    cells.push(d.block3?.photoReason ?? "");
+    cells.push(d.block3?.photoHesitation ? d.block3.photoHesitation : "");
     // ブロック 4
     for (const k of AXIS_KEYS) {
       cells.push(d.block4?.[k]?.detail ?? "");

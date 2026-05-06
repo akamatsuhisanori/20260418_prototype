@@ -205,6 +205,13 @@ export const CONTENT = {
       "（どこで撮影された写真か、どのようなシーンの写真か、誰が映っているか、どのような気持ちか）",
     describePlaceholder: "写真について自由に書いてください...",
     describeMaxLength: 600,
+    reasonQuestion: "なぜその写真を選択しましたか？",
+    reasonPlaceholder: "選んだ理由を自由に書いてください...",
+    reasonMaxLength: 600,
+    hesitationQuestion:
+      "写真を選ぶプロセスで迷った度合いを数値で表現するとすると何点になりますか？",
+    hesitationLow: "1：まったく迷わなかった",
+    hesitationHigh: "7：とても迷った",
     describeNextLabel: "次へ：3 軸で書き出す →",
   },
 

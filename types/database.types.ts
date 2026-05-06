@@ -79,9 +79,14 @@ export interface AssessmentState {
   selectedOrgManual: boolean;
 
   // ---------- ブロック 3 ----------
-  // 選んだ写真について書き出す（何が映っているか / 場所 / 状況 / 人 / 気持ち）
+  // 選んだ写真について書き出す
+  //   - photoDescription: 何が映っているか / 場所 / 状況 / 人 / 気持ち
+  //   - photoReason     : なぜその写真を選んだか
+  //   - photoHesitation : 写真選びで迷った度合い（1-7、0 = 未回答）
   block3: {
     photoDescription: string;
+    photoReason: string;
+    photoHesitation: number;
   };
 
   // ---------- ブロック 4 ----------
