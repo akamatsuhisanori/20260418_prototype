@@ -27,7 +27,7 @@ export default defineNuxtConfig({
     supabaseServiceRoleKey: "", // set via SUPABASE_SERVICE_ROLE_KEY in Vercel env
     adminEmail: "", // set via ADMIN_EMAIL — this account becomes admin on first login
     public: {
-      appName: "Re:roots",
+      appName: "過去組織での経験を用いた自己理解支援ワーク",
       // 完了画面で誘導する振り返りアンケート（Google フォーム）の URL。
       // Vercel 側で NUXT_PUBLIC_SURVEY_URL を設定。
       surveyUrl: "",
@@ -36,7 +36,7 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: "Re:roots",
+      title: "過去組織での経験を用いた自己理解支援ワーク",
       meta: [
         { charset: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },

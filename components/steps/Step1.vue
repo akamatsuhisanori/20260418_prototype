@@ -210,7 +210,16 @@ const pickManual = (id: number) => {
         </p>
       </div>
 
+      <!-- 組織の定義 -->
       <div class="card card--soft" style="margin-top: 16px">
+        <strong>{{ CONTENT.block1.definitionNote.title }}</strong>
+        <p class="small" style="margin-top: 8px">
+          {{ CONTENT.block1.definitionNote.body }}
+        </p>
+      </div>
+
+      <!-- 年代ヒント -->
+      <div class="card card--soft" style="margin-top: 12px">
         <strong>{{ CONTENT.block1.hintTitle }}</strong>
         <div class="stack" style="margin-top: 12px">
           <div v-for="g in CONTENT.block1.hintGroups" :key="g.age">
@@ -294,10 +303,6 @@ const pickManual = (id: number) => {
       >
         {{ CONTENT.block1.addButton }}
       </button>
-
-      <p class="small muted" style="margin-top: 12px">
-        {{ CONTENT.block1.countLabel(orgs.length, CONTENT.block1.maxOrgs) }}
-      </p>
 
       <NavButtons
         can-back

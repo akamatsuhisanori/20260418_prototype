@@ -296,7 +296,7 @@ const print = () => {
 
         <footer class="report__footer">
           <p class="tiny muted">
-            Re:roots — このシートは回答結果の確認・印刷用です。
+            {{ CONTENT.app.name }} — このシートは回答結果の確認・印刷用です。
           </p>
         </footer>
       </article>
