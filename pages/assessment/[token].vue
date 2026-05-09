@@ -2,7 +2,7 @@
 // ============================================================
 // /assessment/[token]
 //   トークン付き URL でアクセスできる回答画面（ログイン不要）。
-//   step 0 = イントロ, 1..6 = ブロック, 7 = 完了画面。
+//   step 0 = イントロ, 1..5 = 各 Step, 6 = 完了画面。
 // ============================================================
 import { CONTENT } from "~/content/assessment";
 
@@ -26,11 +26,9 @@ const {
 setToken(token.value);
 await load();
 
-// アクセスのたびに開始画面 (Step 0) に戻す。
-// 既に提出済みの場合は完了画面 (Step 7) を表示。
 if (!notFound.value) {
   if (submitted.value) {
-    state.value.meta.step = 7;
+    state.value.meta.step = 6;
   } else {
     state.value.meta.step = 0;
   }
@@ -41,14 +39,14 @@ const step = computed({
   set: (v: number) => {
     mutate((s) => {
       s.meta.step = v;
-      // ブロックを跨ぐときは subStep をリセット
+      // ステップを跨ぐときは subStep をリセット
       s.meta.subStep = 0;
     });
   },
 });
 
 const goTo = (n: number) => {
-  step.value = Math.max(0, Math.min(7, n));
+  step.value = Math.max(0, Math.min(6, n));
 };
 </script>
 
@@ -73,7 +71,7 @@ const goTo = (n: number) => {
       </header>
 
       <ProgressBar
-        v-if="step >= 1 && step <= 6"
+        v-if="step >= 1 && step <= 5"
         :total="CONTENT.nav.progressLabels.length"
         :current="step - 1"
       />
@@ -84,7 +82,6 @@ const goTo = (n: number) => {
       <Step3 v-else-if="step === 3" @back="goTo(2)" @next="goTo(4)" />
       <Step4 v-else-if="step === 4" @back="goTo(3)" @next="goTo(5)" />
       <Step5 v-else-if="step === 5" @back="goTo(4)" @next="goTo(6)" />
-      <Step6 v-else-if="step === 6" @back="goTo(5)" @next="goTo(7)" />
       <StepDone v-else />
     </template>
   </div>
