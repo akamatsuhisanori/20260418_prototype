@@ -245,6 +245,29 @@ textarea { min-height: 96px; resize: vertical; }
   font-weight: 700;
 }
 
+/* -------- interpretation (Step 1-2 比較画面の解釈コメント) -------- */
+.interpretation {
+  background: #fef9e7;
+  border: 1px solid #f3e6b3;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-top: 16px;
+  font-size: 15px;
+  line-height: 1.7;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.interpretation__icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+.interpretation__body {
+  flex: 1;
+  color: #6b4f1d;
+}
+
 /* -------- modal -------- */
 .modal-backdrop {
   position: fixed;

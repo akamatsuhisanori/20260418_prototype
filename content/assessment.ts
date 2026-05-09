@@ -136,14 +136,16 @@ export const CONTENT = {
     deleteButton: "削除",
     countLabel: (n: number, max: number) => `合計：${n} / ${max} 個`,
     maxOrgs: 8,
-    nextLabel: "次へ：同一化スコアの測定 →",
+    nextLabel: "次へ：自分との重なりの強さを測定 →",
   },
 
   // ============================================================
-  // ブロック 2: 全組織への同一化スコア測定
+  // ブロック 2: 全組織への自分との重なりの強さ測定
+  // （内部キーは "block2" のまま、UI 表示は「重なり」表現に統一）
   // ============================================================
   block2: {
-    title: "ブロック 2：同一化スコアの測定",
+    title: "ブロック 2：自分との重なりの強さを測定",
+    subTitle: "自分との重なりの強さを測定",
     description:
       "ブロック 1 で挙げた組織それぞれについて、以下の質問にお答えください。",
     instructionPast:
@@ -187,12 +189,20 @@ export const CONTENT = {
 
     // 2-2: 比較表示
     comparisonTitle: "あなたの結果",
-    comparisonPastTitle: "過去組織で最も同一化していた組織",
+    comparisonPastTitle: "過去組織で最も自分との重なりが強かった組織",
     comparisonCurrentTitle: "現在の所属組織",
     comparisonNoPast: "過去組織の入力がありません",
     comparisonNoCurrent: "現在組織の入力がありません",
-    comparisonScoreLabel: "同一化スコア",
+    comparisonScoreLabel: "重なりの強さ",
     comparisonGapLabel: "スコアの差：",
+    // 解釈コメント（過去スコア - 現在スコアの差で 3 分岐）
+    interpretIcon: "💭",
+    interpretPastStronger:
+      "過去の組織には深く入り込めていたけれど、今の組織にはまだ同じくらいには入り込めていないようです。",
+    interpretCurrentStronger:
+      "今の組織には、すでに自分をしっかり重ねられているようです。過去の組織以上に、今が「自分の場所」になっているのかもしれません。",
+    interpretSimilar:
+      "過去の組織と今の組織への入り込み具合は、わりと近い水準のようです。大きなギャップなく、今の組織に移ってこられているのかもしれませんね。",
 
     // 2-3: 重要組織の確定
     confirmIntroPre:

@@ -147,7 +147,7 @@ const print = () => {
                 <th style="width: 32px">#</th>
                 <th>組織名</th>
                 <th style="width: 80px">区分</th>
-                <th style="width: 80px">同一化スコア</th>
+                <th style="width: 80px">重なりの強さ</th>
               </tr>
             </thead>
             <tbody>

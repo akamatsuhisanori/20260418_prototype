@@ -3,8 +3,8 @@
 // Step 1：過去の所属組織を洗い出し・特定（旧ブロック 1 + 2）
 //   subStep:
 //     0: 組織棚卸し（旧ブロック 1）
-//     1: 同一化スコアの測定（旧ブロック 2 ステップ 2-1）
-//     2: 比較表示（旧ブロック 2 ステップ 2-2）
+//     1: 自分との重なりの強さ測定（旧ブロック 2 ステップ 2-1）
+//     2: 比較表示＋解釈コメント（旧ブロック 2 ステップ 2-2）
 //     3: 重要組織の確定（旧ブロック 2 ステップ 2-3）
 //
 //   入力制約は無し：すべての画面で「次へ」を押せる。
@@ -152,6 +152,19 @@ const scoreGap = computed(() => {
   return Math.abs(pastScore.value - currentScore.value);
 });
 
+// 解釈コメント：past - current の差で 3 分岐
+//   どちらかが未測定（null / 0）なら表示しない
+const interpretation = computed(() => {
+  const p = pastScore.value;
+  const c = currentScore.value;
+  if (p == null || c == null) return null;
+  if (p === 0 || c === 0) return null;
+  const diff = p - c;
+  if (diff >= 0.5) return CONTENT.block2.interpretPastStronger;
+  if (diff <= -0.5) return CONTENT.block2.interpretCurrentStronger;
+  return CONTENT.block2.interpretSimilar;
+});
+
 // =================================================
 // subStep 3：重要組織の確定
 // =================================================
@@ -297,6 +310,7 @@ const pickManual = (id: number) => {
 
     <!-- ============ subStep 1: スコア測定 ============ -->
     <template v-else-if="subStep === 1">
+      <h3 style="margin-top: 0">{{ CONTENT.block2.subTitle }}</h3>
       <p class="muted">{{ CONTENT.block2.description }}</p>
 
       <div v-if="!currentOrg" class="card card--soft" style="margin-top: 12px">
@@ -407,6 +421,12 @@ const pickManual = (id: number) => {
         <p v-if="scoreGap != null">
           {{ CONTENT.block2.comparisonGapLabel }}<strong>{{ scoreGap.toFixed(2) }}</strong>
         </p>
+
+        <!-- 解釈コメント -->
+        <div v-if="interpretation" class="interpretation">
+          <span class="interpretation__icon">{{ CONTENT.block2.interpretIcon }}</span>
+          <p class="interpretation__body">{{ interpretation }}</p>
+        </div>
       </div>
 
       <NavButtons can-back can-next @back="subStep = 1" @next="subStep = 3" />
