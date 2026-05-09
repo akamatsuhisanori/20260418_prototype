@@ -16,7 +16,7 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: "/login",
       callback: "/confirm",
-      exclude: ["/login", "/confirm", "/assessment/*"],
+      exclude: ["/login", "/confirm", "/assessment/*", "/assessment/**"],
     },
     // Cookie-based SSR session — default
     cookieRedirect: false,
