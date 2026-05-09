@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
     ]).flat(),
     "重要組織_名前",
     "重要組織_選定方法",
+    "Step2_写真選定_滞在秒",
     "B3_写真の説明",
     "B3_選んだ理由",
     "B3_迷った度合い(1-7)",
@@ -87,6 +88,7 @@ export default defineEventHandler(async (event) => {
     const sel = orgs.find((o) => o.id === d.selectedOrgId) ?? null;
     cells.push(sel?.name ?? "");
     cells.push(d.selectedOrgManual ? "手動" : sel ? "自動" : "");
+    cells.push(d.block3?.photoSelectionSeconds ?? 0);
     cells.push(d.block3?.photoDescription ?? "");
     cells.push(d.block3?.photoReason ?? "");
     cells.push(d.block3?.photoHesitation ? d.block3.photoHesitation : "");

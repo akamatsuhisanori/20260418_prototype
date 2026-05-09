@@ -80,13 +80,15 @@ export interface AssessmentState {
 
   // ---------- ブロック 3 ----------
   // 選んだ写真について書き出す
-  //   - photoDescription: 何が映っているか / 場所 / 状況 / 人 / 気持ち
-  //   - photoReason     : なぜその写真を選んだか
-  //   - photoHesitation : 写真選びで迷った度合い（1-7、0 = 未回答）
+  //   - photoDescription      : 何が映っているか / 場所 / 状況 / 人 / 気持ち
+  //   - photoReason           : なぜその写真を選んだか
+  //   - photoHesitation       : 写真選びで迷った度合い（1-7、0 = 未回答）
+  //   - photoSelectionSeconds : Step 2 の写真選定画面に滞在した累積秒数
   block3: {
     photoDescription: string;
     photoReason: string;
     photoHesitation: number;
+    photoSelectionSeconds: number;
   };
 
   // ---------- ブロック 4 ----------
