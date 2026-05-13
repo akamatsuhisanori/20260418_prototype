@@ -1,9 +1,22 @@
 // ============================================================
 // useAssessmentState
-//   6 ブロック構成（仕様書 v1）の state を Vue 側で持ち、
+//   Step 1〜8 までの state を Vue 側で持ち、
 //   /api/respondent/[token] 経由で Supabase へ debounce 保存する。
+//
+//   トークンは（1）assessment ページ URL から取得して setToken() で
+//   セットされる経路と、（2）/daily や /review 等の固定 URL から
+//   useCookie("reroots-token") を通じて読み出す経路の 2 つを持つ。
 // ============================================================
-import type { AssessmentState, Triad, Axis, GapItem } from "~/types/database.types";
+import type {
+  AssessmentState,
+  Triad,
+  Axis,
+  GapItem,
+  Step7Record,
+  Step8Review,
+} from "~/types/database.types";
+
+export const TOKEN_COOKIE_NAME = "reroots-token";
 
 const EMPTY_AXIS = (): Axis => ({ detail: "", summary: "" });
 const EMPTY_TRIAD = (): Triad => ({
@@ -12,6 +25,17 @@ const EMPTY_TRIAD = (): Triad => ({
   what: EMPTY_AXIS(),
 });
 const EMPTY_GAP = (): GapItem => ({ hasGap: null, action: "" });
+
+const EMPTY_STEP8 = (): Step8Review => ({
+  q1CommonPatterns: "",
+  q2NewAwareness: "",
+  q3CurrentEnvPossibilities: "",
+  q4EnvironmentDesign: "",
+  q5NewOpportunities: "",
+  q5NoneFlag: false,
+  q6OneLine: "",
+  submittedAt: null,
+});
 
 export const EMPTY_STATE = (): AssessmentState => ({
   organizations: [],
@@ -35,6 +59,10 @@ export const EMPTY_STATE = (): AssessmentState => ({
       what: EMPTY_GAP(),
     },
   },
+  step6: { scenes: [] },
+  step6CompletedAt: null,
+  step7: { records: [] },
+  step8: EMPTY_STEP8(),
   meta: {
     step: 0,
     subStep: 0,
@@ -80,6 +108,21 @@ const normalize = (loaded: Partial<AssessmentState> | null | undefined): Assessm
         what: { ...base.block6.gaps.what, ...(loaded.block6?.gaps?.what ?? {}) },
       },
     },
+    step6: {
+      scenes: Array.isArray(loaded.step6?.scenes)
+        ? (loaded.step6!.scenes.filter((x: unknown) => typeof x === "string") as string[])
+        : [],
+    },
+    step6CompletedAt:
+      typeof loaded.step6CompletedAt === "string" ? loaded.step6CompletedAt : null,
+    step7: {
+      records: Array.isArray(loaded.step7?.records)
+        ? (loaded.step7!.records.filter(
+            (r: any) => r && typeof r === "object",
+          ) as Step7Record[])
+        : [],
+    },
+    step8: { ...base.step8, ...(loaded.step8 ?? {}) },
     meta: { ...base.meta, ...(loaded.meta ?? {}) },
   };
 };
@@ -105,6 +148,21 @@ export const useAssessmentState = () => {
       notFound.value = false;
     }
     tokenState.value = token;
+    // /daily, /review といった固定 URL から後で同じ参加者を識別できるよう
+    // クッキーにも保存する（30 日有効、SSR セーフ）。
+    const c = useCookie<string>(TOKEN_COOKIE_NAME, {
+      maxAge: 60 * 60 * 24 * 30,
+      sameSite: "lax",
+      path: "/",
+    });
+    c.value = token;
+  };
+
+  // /daily, /review など URL にトークンを含まないページで使うヘルパ。
+  // 戻り値が空文字なら未識別。
+  const loadTokenFromCookie = (): string => {
+    const c = useCookie<string>(TOKEN_COOKIE_NAME);
+    return c.value || "";
   };
 
   // ---------------------------------------------------------
@@ -232,6 +290,7 @@ export const useAssessmentState = () => {
     submitted,
     notFound,
     setToken,
+    loadTokenFromCookie,
     load,
     save,
     mutate,

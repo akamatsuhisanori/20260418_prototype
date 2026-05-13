@@ -6,6 +6,9 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   // 回答者向け公開ルート
   if (to.path.startsWith("/assessment/")) return;
+  // 1 週間ワーク・振り返りワーク（クッキーで参加者識別）も公開
+  if (to.path === "/daily" || to.path.startsWith("/daily/")) return;
+  if (to.path === "/review" || to.path.startsWith("/review/")) return;
 
   // 認証関連の公開ルート
   const publicPaths = ["/login", "/confirm"];

@@ -11,7 +11,7 @@
 import { CONTENT, AXIS_KEYS, type AxisKey } from "~/content/assessment";
 
 const emit = defineEmits<{ (e: "back"): void; (e: "next"): void }>();
-const { state, mutate, submit } = useAssessmentState();
+const { state, mutate } = useAssessmentState();
 
 const subStep = computed({
   get: () => state.value.meta.subStep,
@@ -45,14 +45,10 @@ const setAction = (key: AxisKey, v: string) =>
     s.block6.gaps[key].action = v.slice(0, CONTENT.block6.actionMaxLength);
   });
 
-const submitting = ref(false);
-
-const finish = async () => {
-  submitting.value = true;
-  const ok = await submit();
-  submitting.value = false;
-  if (ok) emit("next");
-  else alert("送信に失敗しました。もう一度お試しください。");
+// Step 5 では submit せず、Step 6 へ進めるだけ。
+// 最終 submit は Step 8（/review）で行う。
+const finish = () => {
+  emit("next");
 };
 </script>
 
@@ -286,8 +282,7 @@ const finish = async () => {
       <NavButtons
         can-back
         can-next
-        :next-disabled="submitting"
-        :next-label="submitting ? CONTENT.block6.submitting : CONTENT.block6.nextLabel"
+        :next-label="CONTENT.block6.nextLabel"
         @back="subStep = 1"
         @next="finish"
       />

@@ -108,12 +108,49 @@ export interface AssessmentState {
     };
   };
 
+  // ---------- Step 6（明日からの実践シーン） ----------
+  step6: {
+    scenes: string[]; // 1-10 件
+  };
+  // Step 6 を完了した日（ISO 文字列）。Step 7 の Day 番号を算出する基準
+  step6CompletedAt: string | null;
+
+  // ---------- Step 7（1 週間ワーク） ----------
+  step7: {
+    records: Step7Record[];
+  };
+
+  // ---------- Step 8（振り返りワーク） ----------
+  step8: Step8Review;
+
   // ---------- 進捗 ----------
   meta: {
-    step: number; // 0 = イントロ, 1..6 = 各ブロック, 7 = 完了画面
-    subStep: number; // 各ブロック内の小ステップ
+    step: number; // 0 = イントロ, 1..6 = 各 Step（Step 6 含む）, 7 = 完了画面
+    subStep: number;
     updatedAt: string;
   };
+}
+
+export interface Step7Record {
+  dayNumber: number; // 1..7
+  targetDate: string; // YYYY-MM-DD
+  q1TodayAchieved: string;
+  q1NoneFlag: boolean;
+  q2FuturePossible: string;
+  q3TomorrowGoal: string;
+  firstSubmittedAt: string | null;
+  lastUpdatedAt: string | null;
+}
+
+export interface Step8Review {
+  q1CommonPatterns: string;
+  q2NewAwareness: string;
+  q3CurrentEnvPossibilities: string;
+  q4EnvironmentDesign: string;
+  q5NewOpportunities: string;
+  q5NoneFlag: boolean;
+  q6OneLine: string;
+  submittedAt: string | null;
 }
 
 // ------------------------------------------------------------

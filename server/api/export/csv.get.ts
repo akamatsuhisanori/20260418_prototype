@@ -63,6 +63,27 @@ export default defineEventHandler(async (event) => {
       `B6_${k}_ギャップ有無`,
       `B6_${k}_行動`,
     ]),
+    // Step 6: 明日からの実践シーン
+    "Step6_完了日",
+    ...Array.from({ length: 10 }, (_, i) => `Step6_シーン${i + 1}`),
+    // Step 7: 1 週間ワーク（Day 1〜7）
+    ...Array.from({ length: 7 }, (_, i) => [
+      `Day${i + 1}_日付`,
+      `Day${i + 1}_Q1_今日できた`,
+      `Day${i + 1}_Q1_特になし`,
+      `Day${i + 1}_Q2_できそう`,
+      `Day${i + 1}_Q3_明日の目標`,
+      `Day${i + 1}_送信日時`,
+    ]).flat(),
+    // Step 8: 振り返り
+    "Step8_Q1共通点",
+    "Step8_Q2新発見",
+    "Step8_Q3現環境で可能",
+    "Step8_Q4工夫",
+    "Step8_Q5新機会",
+    "Step8_Q5特になし",
+    "Step8_Q6一言",
+    "Step8_送信日時",
   ];
 
   const lines: string[] = [header.map(csvEscape).join(",")];
@@ -132,6 +153,30 @@ export default defineEventHandler(async (event) => {
       cells.push(g?.hasGap == null ? "" : g.hasGap ? "あり" : "なし");
       cells.push(g?.action ?? "");
     }
+    // Step 6: 完了日 + 最大 10 シーン
+    cells.push(d.step6CompletedAt ?? "");
+    for (let i = 0; i < 10; i++) {
+      cells.push(d.step6?.scenes?.[i] ?? "");
+    }
+    // Step 7: Day 1〜7
+    for (let i = 1; i <= 7; i++) {
+      const rec = d.step7?.records?.find((r) => r.dayNumber === i);
+      cells.push(rec?.targetDate ?? "");
+      cells.push(rec?.q1TodayAchieved ?? "");
+      cells.push(rec?.q1NoneFlag ? "TRUE" : "");
+      cells.push(rec?.q2FuturePossible ?? "");
+      cells.push(rec?.q3TomorrowGoal ?? "");
+      cells.push(rec?.firstSubmittedAt ?? "");
+    }
+    // Step 8
+    cells.push(d.step8?.q1CommonPatterns ?? "");
+    cells.push(d.step8?.q2NewAwareness ?? "");
+    cells.push(d.step8?.q3CurrentEnvPossibilities ?? "");
+    cells.push(d.step8?.q4EnvironmentDesign ?? "");
+    cells.push(d.step8?.q5NewOpportunities ?? "");
+    cells.push(d.step8?.q5NoneFlag ? "TRUE" : "");
+    cells.push(d.step8?.q6OneLine ?? "");
+    cells.push(d.step8?.submittedAt ?? "");
 
     lines.push(cells.map(csvEscape).join(","));
   }
