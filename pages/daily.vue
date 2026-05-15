@@ -445,6 +445,16 @@ const dayState = (dayNumber: number): "answered" | "current" | "empty" => {
             </tbody>
           </table>
         </div>
+
+        <!-- 振り返りワークへの導線（記録が未記入でもいつでも進める） -->
+        <div class="btn-row" style="margin-top: 16px">
+          <span />
+          <div class="btn-right">
+            <NuxtLink to="/review" class="btn btn--primary">
+              {{ CONTENT.step7.reviewButtonLabel }}
+            </NuxtLink>
+          </div>
+        </div>
       </AppCard>
     </template>
   </div>

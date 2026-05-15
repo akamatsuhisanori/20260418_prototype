@@ -515,9 +515,9 @@ export const CONTENT = {
     q6MaxLength: 200,
     submitButton: "送信する",
 
-    tooEarlyTitle: "まだ振り返りワークの時期ではありません",
+    tooEarlyTitle: "Web ワーク（Step 1〜6）が完了していません",
     tooEarlyBody:
-      "1 週間ワークの Day 7 を終えてからアクセスしてください。",
+      "最初に Web ワークを完了してから振り返りワークに進んでください。",
     tokenMissingBody:
       "参加者を識別できませんでした。最初の URL からアクセスし直してください。",
 

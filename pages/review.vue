@@ -49,14 +49,9 @@ const step6Date = computed(() => {
   return d;
 });
 
-// アクセス可能か：step6CompletedAt + 8 日以降であること
-const accessAllowed = computed(() => {
-  if (!step6Date.value) return false;
-  const diff = Math.floor(
-    (todayDate.value.getTime() - step6Date.value.getTime()) / 86400000,
-  );
-  return diff >= 8;
-});
+// 新仕様：日付ゲートを撤廃し、Step 6 完了済みで参加者識別ができていれば常時アクセス可能。
+// （未記入のまま振り返りに進めるようにするため）
+const accessAllowed = computed(() => !!step6Date.value);
 
 // 入力
 const setQ1 = (v: string) =>
