@@ -14,6 +14,8 @@ const {
   state,
   mutate,
   load,
+  flush,
+  saving,
   setToken,
   loadTokenFromCookie,
   submit,
@@ -98,6 +100,8 @@ const onSubmit = async () => {
   mutate((s) => {
     s.step8.submittedAt = new Date().toISOString();
   });
+  // 直前の編集も含めて確実に保存してから submit
+  await flush();
   const ok = await submit();
   submitting.value = false;
   if (!ok) alert("送信に失敗しました。もう一度お試しください。");
@@ -119,9 +123,12 @@ const truncate = (s: string, n: number) =>
 
 <template>
   <div class="page">
-    <header class="row" style="margin-bottom: 12px">
+    <header class="row" style="margin-bottom: 12px; flex-wrap: wrap">
       <h1 style="margin: 0; font-size: 18px">{{ CONTENT.app.name }}</h1>
-      <span class="small muted" style="margin-left: auto">{{ CONTENT.step8.title }}</span>
+      <span class="small muted" style="margin-left: auto">
+        {{ CONTENT.step8.title }}
+        <span v-if="saving" style="margin-left: 8px">（保存中…）</span>
+      </span>
     </header>
 
     <!-- クッキーなし -->

@@ -14,9 +14,12 @@ const {
   state,
   mutate,
   load,
+  flush,
   setToken,
   loadTokenFromCookie,
   notFound,
+  saving,
+  submitted,
 } = useAssessmentState();
 
 // ---- トークン取得 + データロード ----
@@ -157,7 +160,8 @@ const setQ3 = (v: string) =>
     r.q3TomorrowGoal = v.slice(0, CONTENT.step7.q3MaxLength);
   });
 
-const submitRecord = () => {
+const submitting = ref(false);
+const submitRecord = async () => {
   if (editingDay.value == null) return;
   ensureCurrentExists();
   mutate((s) => {
@@ -166,6 +170,9 @@ const submitRecord = () => {
       r.firstSubmittedAt = new Date().toISOString();
     }
   });
+  submitting.value = true;
+  await flush(); // debounce を待たず即時保存
+  submitting.value = false;
   alert("今日の記録を送信しました。");
 };
 
@@ -218,9 +225,12 @@ const dayState = (dayNumber: number): "answered" | "current" | "future" | "past-
 
 <template>
   <div class="page">
-    <header class="row" style="margin-bottom: 12px">
+    <header class="row" style="margin-bottom: 12px; flex-wrap: wrap">
       <h1 style="margin: 0; font-size: 18px">{{ CONTENT.app.name }}</h1>
-      <span class="small muted" style="margin-left: auto">{{ CONTENT.step7.title }}</span>
+      <span class="small muted" style="margin-left: auto">
+        {{ CONTENT.step7.title }}
+        <span v-if="saving" style="margin-left: 8px">（保存中…）</span>
+      </span>
     </header>
 
     <!-- ============ クッキーなし ============ -->
@@ -238,6 +248,19 @@ const dayState = (dayNumber: number): "answered" | "current" | "future" | "past-
         <p class="muted">
           URL が間違っているか、回答が無効化されている可能性があります。
         </p>
+      </AppCard>
+    </template>
+
+    <!-- ============ 全工程完了済み（/review submit 後） ============ -->
+    <template v-else-if="submitted">
+      <AppCard>
+        <h2 class="center">🎉 すべてのワークが完了しました</h2>
+        <p class="center" style="margin-top: 12px">
+          1 週間ワーク・振り返りワークまですべて完了しています。
+        </p>
+        <div class="btn-row" style="justify-content: center; margin-top: 24px">
+          <NuxtLink to="/review" class="btn">振り返りワークを開く</NuxtLink>
+        </div>
       </AppCard>
     </template>
 
@@ -366,8 +389,13 @@ const dayState = (dayNumber: number): "answered" | "current" | "future" | "past-
         <div class="btn-row">
           <span />
           <div class="btn-right">
-            <button type="button" class="btn btn--primary" @click="submitRecord">
-              {{ CONTENT.step7.submitButton }}
+            <button
+              type="button"
+              class="btn btn--primary"
+              :disabled="submitting"
+              @click="submitRecord"
+            >
+              {{ submitting ? "送信中..." : CONTENT.step7.submitButton }}
             </button>
           </div>
         </div>

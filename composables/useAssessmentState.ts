@@ -217,6 +217,27 @@ export const useAssessmentState = () => {
     }, 600);
   };
 
+  // 即時保存（debounce を飛ばす）。送信ボタンや離脱前に使う。
+  const flush = async () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    if (submitted.value || notFound.value || !tokenState.value) return;
+    saving.value = true;
+    state.value.meta.updatedAt = new Date().toISOString();
+    try {
+      await $fetch(`/api/respondent/${encodeURIComponent(tokenState.value)}`, {
+        method: "PUT",
+        body: { data: state.value },
+      });
+    } catch (e) {
+      console.error("[useAssessmentState.flush]", e);
+    } finally {
+      saving.value = false;
+    }
+  };
+
   const mutate = (fn: (s: AssessmentState) => void) => {
     fn(state.value);
     save();
@@ -293,6 +314,7 @@ export const useAssessmentState = () => {
     loadTokenFromCookie,
     load,
     save,
+    flush,
     mutate,
     submit,
     // derived

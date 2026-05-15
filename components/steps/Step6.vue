@@ -66,6 +66,17 @@ const dailyOrigin = computed(() => {
   if (typeof window === "undefined") return "";
   return window.location.origin;
 });
+const dailyFullUrl = computed(() => `${dailyOrigin.value}/daily`);
+
+const copyDailyUrl = async () => {
+  try {
+    await navigator.clipboard.writeText(dailyFullUrl.value);
+    alert("URL をコピーしました。");
+  } catch {
+    // Clipboard API が使えない環境（古いブラウザ等）はプロンプトでフォールバック
+    if (typeof window !== "undefined") prompt("コピーしてください:", dailyFullUrl.value);
+  }
+};
 </script>
 
 <template>
@@ -140,8 +151,13 @@ const dailyOrigin = computed(() => {
         <code
           style="display: block; word-break: break-all; padding: 8px; background: var(--bg); margin-top: 8px"
         >
-          {{ dailyOrigin }}/daily
+          {{ dailyFullUrl }}
         </code>
+        <div class="row" style="margin-top: 8px">
+          <button type="button" class="btn small" @click="copyDailyUrl">
+            URL をコピー
+          </button>
+        </div>
       </div>
 
       <p class="small muted" style="margin-top: 12px">
