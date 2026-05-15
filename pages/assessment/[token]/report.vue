@@ -217,7 +217,7 @@ const print = () => {
             </p>
           </div>
 
-          <h3>あなたにとって重要なコア</h3>
+          <h3>あなたは何を大切にしている人間なのか</h3>
           <p class="report__answer report__core">
             {{ data.coreStatement || "（未入力）" }}
           </p>

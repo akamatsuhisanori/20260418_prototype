@@ -61,7 +61,7 @@ const finish = () => {
       <h3>{{ CONTENT.block6.matrixTitle }}</h3>
       <p class="muted">{{ CONTENT.block6.matrixIntro }}</p>
 
-      <!-- Step 4 のおさらい：3 軸の一言 + 統合した自分にとって重要なコア -->
+      <!-- Step 4 のおさらい：3 軸の一言 + 「何を大切にしている人間なのか」-->
       <div class="card card--soft" style="margin-top: 12px">
         <strong>{{ CONTENT.block6.block5RecallTitle }}</strong>
         <ul style="margin: 8px 0 0 16px; padding: 0">
