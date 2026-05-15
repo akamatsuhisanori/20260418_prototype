@@ -56,17 +56,18 @@ const step6Date = computed(() => {
 });
 
 // Day 番号：step6CompletedAt の翌日 = Day 1
-//   今日が step6Date と同じ／前なら null（早すぎ）
-//   今日が step6Date + 7 日を超えたら 8 を返す（Day 7 終了済）
-const todayDayNumber = computed<number | null>(() => {
-  if (!step6Date.value) return null;
+//   - Step 6 完了日（diff = 0）でも全 Day を編集可能にするため、null を返さず 0 を返す
+//   - Day 1〜7 はそのまま
+//   - Day 8+（diff > 7）= 1 週間ワーク完了済み
+const todayDayNumber = computed<number>(() => {
+  if (!step6Date.value) return 0;
   const diff = Math.floor(
     (todayDate.value.getTime() - step6Date.value.getTime()) / 86400000,
   );
-  if (diff < 1) return null;
-  if (diff > 7) return 8;
-  return diff;
+  return Math.max(0, diff);
 });
+
+const isWorkComplete = computed(() => todayDayNumber.value >= 8);
 
 const allDays = computed(() => {
   if (!step6Date.value) return [] as { dayNumber: number; date: string }[];
@@ -84,10 +85,14 @@ const editingDay = ref<number | null>(null);
 
 onMounted(() => {
   if (editingDay.value !== null) return;
-  if (todayDayNumber.value && todayDayNumber.value <= 7) {
-    editingDay.value = todayDayNumber.value;
-  } else if (todayDayNumber.value === 8) {
-    editingDay.value = null; // 振り返りワークへの導線
+  const t = todayDayNumber.value;
+  if (t >= 1 && t <= 7) {
+    editingDay.value = t;
+  } else if (t === 0) {
+    // 完了当日（プレビュー）：Day 1 をデフォルト編集対象に
+    editingDay.value = 1;
+  } else {
+    editingDay.value = null; // 完了済み（/review 導線へ）
   }
 });
 
@@ -177,9 +182,9 @@ const submitRecord = async () => {
 };
 
 // 表で行をクリックしたとき
+//   新仕様：全 Day 編集可能（未来 Day もロックしない）
 const enterDay = (dayNumber: number) => {
-  // 未来 Day は不可
-  if (todayDayNumber.value == null || dayNumber > todayDayNumber.value) return;
+  if (dayNumber < 1 || dayNumber > 7) return;
   editingDay.value = dayNumber;
   ensureCurrentExists();
 };
@@ -210,16 +215,20 @@ const fmtMd = (iso: string) => {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 };
 
-// Day 状態：reached / answered / future
-const dayState = (dayNumber: number): "answered" | "current" | "future" | "past-empty" => {
+// Day 状態：今日の Day を current、内容があれば answered、それ以外は empty
+const dayState = (dayNumber: number): "answered" | "current" | "empty" => {
   const r = recordOf(dayNumber);
-  const isCurrent = dayNumber === todayDayNumber.value;
-  if (todayDayNumber.value == null) return "future";
-  if (dayNumber > todayDayNumber.value) return "future";
-  if (r && (r.firstSubmittedAt || r.q1TodayAchieved || r.q2FuturePossible || r.q3TomorrowGoal || r.q1NoneFlag)) {
-    return isCurrent ? "current" : "answered";
-  }
-  return isCurrent ? "current" : "past-empty";
+  const isCurrent =
+    todayDayNumber.value >= 1 && dayNumber === todayDayNumber.value;
+  const hasContent =
+    !!r &&
+    (r.firstSubmittedAt ||
+      r.q1TodayAchieved ||
+      r.q2FuturePossible ||
+      r.q3TomorrowGoal ||
+      r.q1NoneFlag);
+  if (hasContent) return isCurrent ? "current" : "answered";
+  return isCurrent ? "current" : "empty";
 };
 </script>
 
@@ -272,16 +281,8 @@ const dayState = (dayNumber: number): "answered" | "current" | "future" | "past-
       </AppCard>
     </template>
 
-    <!-- ============ Day 1 まだ ============ -->
-    <template v-else-if="todayDayNumber === null">
-      <AppCard>
-        <h2>{{ CONTENT.step7.tooEarlyTitle }}</h2>
-        <p class="muted">{{ CONTENT.step7.tooEarlyBody }}</p>
-      </AppCard>
-    </template>
-
     <!-- ============ Day 7 終了済 ============ -->
-    <template v-else-if="todayDayNumber === 8">
+    <template v-else-if="isWorkComplete">
       <AppCard>
         <h2>{{ CONTENT.step7.allDoneTitle }}</h2>
         <p>{{ CONTENT.step7.allDoneBody }}</p>
@@ -417,26 +418,27 @@ const dayState = (dayNumber: number): "answered" | "current" | "future" | "past-
                 :key="`row-${d.dayNumber}`"
                 :class="{
                   'records-table__row--current': d.dayNumber === todayDayNumber,
-                  'records-table__row--future': d.dayNumber > (todayDayNumber ?? 0),
+                  'records-table__row--editing': d.dayNumber === editingDay,
                 }"
               >
                 <td><strong>Day {{ d.dayNumber }}</strong></td>
                 <td class="small">{{ fmtMd(d.date) }}</td>
-                <td class="small">{{ d.dayNumber > (todayDayNumber ?? 0) ? "—" : q1Cell(recordOf(d.dayNumber)) }}</td>
-                <td class="small">{{ d.dayNumber > (todayDayNumber ?? 0) ? "—" : cellPreview(recordOf(d.dayNumber), "q2FuturePossible") }}</td>
-                <td class="small">{{ d.dayNumber > (todayDayNumber ?? 0) ? "—" : cellPreview(recordOf(d.dayNumber), "q3TomorrowGoal") }}</td>
+                <td class="small">{{ q1Cell(recordOf(d.dayNumber)) }}</td>
+                <td class="small">
+                  {{ cellPreview(recordOf(d.dayNumber), "q2FuturePossible") }}
+                </td>
+                <td class="small">
+                  {{ cellPreview(recordOf(d.dayNumber), "q3TomorrowGoal") }}
+                </td>
                 <td>
                   <button
                     type="button"
                     class="btn small"
-                    :disabled="d.dayNumber > (todayDayNumber ?? 0)"
                     @click="enterDay(d.dayNumber)"
                   >
-                    {{ d.dayNumber > (todayDayNumber ?? 0)
-                      ? CONTENT.step7.notReached
-                      : recordOf(d.dayNumber)?.firstSubmittedAt
-                        ? CONTENT.step7.editButton
-                        : CONTENT.step7.enterButton }}
+                    {{ recordOf(d.dayNumber)?.firstSubmittedAt
+                      ? CONTENT.step7.editButton
+                      : CONTENT.step7.enterButton }}
                   </button>
                 </td>
               </tr>
@@ -463,12 +465,7 @@ const dayState = (dayNumber: number): "answered" | "current" | "future" | "past-
   background: var(--card);
   font-size: 12px;
 }
-.day-progress__seg--future {
-  background: var(--border-soft);
-  color: var(--muted);
-  opacity: 0.6;
-}
-.day-progress__seg--past-empty {
+.day-progress__seg--empty {
   background: #fff;
   color: var(--text-soft);
 }
@@ -493,5 +490,5 @@ const dayState = (dayNumber: number): "answered" | "current" | "future" | "past-
   min-width: 540px;
 }
 .records-table__row--current { background: #ecfdf5; }
-.records-table__row--future { opacity: 0.5; }
+.records-table__row--editing { box-shadow: inset 3px 0 0 var(--accent); }
 </style>

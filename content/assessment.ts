@@ -467,15 +467,11 @@ export const CONTENT = {
     tableEmpty: "（まだ記録なし）",
     editButton: "編集",
     enterButton: "記入",
-    notReached: "未到達",
 
     // ステータスメッセージ
     notStartedTitle: "1 週間ワークはまだ始まっていません",
     notStartedBody:
-      "Step 6（明日からの実践シーン）を完了すると、翌日から Day 1 が開始されます。",
-    tooEarlyTitle: "Day 1 は明日からスタートします",
-    tooEarlyBody:
-      "本日中はまだ記入できません。日付が変わったらアクセスしてください。",
+      "Step 6（明日からの実践シーン）を完了すると、Day 1 が開始されます。",
     tokenMissingTitle: "このブラウザでは参加者を識別できませんでした",
     tokenMissingBody:
       "最初にお渡しした URL を開き直すか、ブラウザのクッキーを有効にしてください。",
