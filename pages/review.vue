@@ -54,13 +54,11 @@ const step6Date = computed(() => {
 const accessAllowed = computed(() => !!step6Date.value);
 
 // 入力
+//   仕様変更：旧 Q2 (q2NewAwareness) と旧 Q6 (q6OneLine) の質問は UI から削除。
+//   フィールド自体は state / 既存データ互換のため残してあるが、画面では聞かない。
 const setQ1 = (v: string) =>
   mutate((s) => {
     s.step8.q1CommonPatterns = v.slice(0, CONTENT.step8.q1MaxLength);
-  });
-const setQ2 = (v: string) =>
-  mutate((s) => {
-    s.step8.q2NewAwareness = v.slice(0, CONTENT.step8.q2MaxLength);
   });
 const setQ3 = (v: string) =>
   mutate((s) => {
@@ -77,10 +75,6 @@ const setQ5 = (v: string) =>
 const setQ5None = (v: boolean) =>
   mutate((s) => {
     s.step8.q5NoneFlag = v;
-  });
-const setQ6 = (v: string) =>
-  mutate((s) => {
-    s.step8.q6OneLine = v.slice(0, CONTENT.step8.q6MaxLength);
   });
 
 const submitting = ref(false);
@@ -215,7 +209,7 @@ const truncate = (s: string, n: number) =>
         </div>
       </AppCard>
 
-      <!-- 6 質問 -->
+      <!-- 4 質問（旧 Q2 / Q6 は仕様変更により削除済み） -->
       <AppCard>
         <div class="field">
           <label>Q1．{{ CONTENT.step8.q1Label }}</label>
@@ -231,20 +225,7 @@ const truncate = (s: string, n: number) =>
         </div>
 
         <div class="field">
-          <label>Q2．{{ CONTENT.step8.q2Label }}</label>
-          <textarea
-            :value="state.step8.q2NewAwareness"
-            :maxlength="CONTENT.step8.q2MaxLength"
-            style="min-height: 120px"
-            @input="setQ2(($event.target as HTMLTextAreaElement).value)"
-          />
-          <p class="tiny muted">
-            {{ state.step8.q2NewAwareness.length }} / {{ CONTENT.step8.q2MaxLength }} 字
-          </p>
-        </div>
-
-        <div class="field">
-          <label>Q3．{{ CONTENT.step8.q3Label }}</label>
+          <label>Q2．{{ CONTENT.step8.q3Label }}</label>
           <textarea
             :value="state.step8.q3CurrentEnvPossibilities"
             :maxlength="CONTENT.step8.q3MaxLength"
@@ -257,7 +238,7 @@ const truncate = (s: string, n: number) =>
         </div>
 
         <div class="field">
-          <label>Q4．{{ CONTENT.step8.q4Label }}</label>
+          <label>Q3．{{ CONTENT.step8.q4Label }}</label>
           <p class="small muted">{{ CONTENT.step8.q4Hint }}</p>
           <textarea
             :value="state.step8.q4EnvironmentDesign"
@@ -271,7 +252,7 @@ const truncate = (s: string, n: number) =>
         </div>
 
         <div class="field">
-          <label>Q5．{{ CONTENT.step8.q5Label }}</label>
+          <label>Q4．{{ CONTENT.step8.q5Label }}</label>
           <p class="small muted">{{ CONTENT.step8.q5Hint }}</p>
           <textarea
             :value="state.step8.q5NewOpportunities"
@@ -291,19 +272,6 @@ const truncate = (s: string, n: number) =>
             />
             <span>{{ CONTENT.step8.q5NoneLabel }}</span>
           </label>
-        </div>
-
-        <div class="field">
-          <label>Q6．{{ CONTENT.step8.q6Label }}</label>
-          <textarea
-            :value="state.step8.q6OneLine"
-            :maxlength="CONTENT.step8.q6MaxLength"
-            style="min-height: 80px"
-            @input="setQ6(($event.target as HTMLTextAreaElement).value)"
-          />
-          <p class="tiny muted">
-            {{ state.step8.q6OneLine.length }} / {{ CONTENT.step8.q6MaxLength }} 字
-          </p>
         </div>
 
         <div class="btn-row">
