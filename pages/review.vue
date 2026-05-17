@@ -83,6 +83,12 @@ const surveyUrl = computed(
   () => (config.public as Record<string, unknown>).surveyUrl as string | undefined,
 );
 
+// すべて完了画面に表示する「お土産」レポートへのパス
+const reportPath = computed(() => {
+  if (!cookieToken) return "";
+  return `/assessment/${encodeURIComponent(cookieToken)}/report`;
+});
+
 const onSubmit = async () => {
   submitting.value = true;
   // 提出時刻を記録
@@ -143,6 +149,26 @@ const truncate = (s: string, n: number) =>
       <AppCard>
         <h2 class="center">{{ CONTENT.step8.doneTitle }}</h2>
         <p class="center" style="margin-top: 12px">{{ CONTENT.step8.doneBody }}</p>
+
+        <!-- お土産レポート -->
+        <div class="card card--soft" style="margin-top: 20px; text-align: center">
+          <p style="margin: 0">
+            <strong>🎁 すべての回答内容をお土産にどうぞ</strong>
+          </p>
+          <p class="small muted" style="margin: 6px 0 12px">
+            Step 1〜8 の内容を A4 縦の印刷用レイアウトで表示します。
+            PDF として保存もできます。
+          </p>
+          <NuxtLink
+            v-if="reportPath"
+            :to="reportPath"
+            target="_blank"
+            class="btn"
+          >
+            🖨️ 回答結果を印刷用に表示
+          </NuxtLink>
+        </div>
+
         <div class="btn-row" style="justify-content: center; margin-top: 24px">
           <a
             v-if="surveyUrl"

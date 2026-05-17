@@ -69,11 +69,53 @@ const orgScoreAvg = (orgId: number): number => {
   return filled.reduce((a, b) => a + b, 0) / filled.length;
 };
 
+// Step 6: 空文字のシーンは省く
+const filledScenes = computed(() =>
+  (data.value?.step6?.scenes ?? []).filter((s) => s.trim().length > 0),
+);
+
+// Step 7: 日付昇順、内容のある行のみ
+const sortedRecords = computed(() =>
+  (data.value?.step7?.records ?? [])
+    .slice()
+    .sort((a, b) => a.dayNumber - b.dayNumber)
+    .filter(
+      (r) =>
+        r.firstSubmittedAt ||
+        r.q1TodayAchieved ||
+        r.q2FuturePossible ||
+        r.q3TomorrowGoal ||
+        r.q1NoneFlag,
+    ),
+);
+const hasStep7 = computed(() => sortedRecords.value.length > 0);
+
+// Step 8: いずれかが埋まっていれば表示
+const hasStep8 = computed(() => {
+  const s = data.value?.step8;
+  if (!s) return false;
+  return !!(
+    s.q1CommonPatterns ||
+    s.q3CurrentEnvPossibilities ||
+    s.q4EnvironmentDesign ||
+    s.q5NewOpportunities ||
+    s.q5NoneFlag ||
+    s.submittedAt
+  );
+});
+
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
+
+const fmtMd = (iso: string | null | undefined) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  return `${d.getMonth() + 1}/${d.getDate()}`;
 };
 
 const print = () => {
@@ -294,6 +336,76 @@ const print = () => {
           </div>
         </section>
 
+        <!-- ============ Step 6 ============ -->
+        <section class="report__section">
+          <h2>Step 6：明日から自分らしさを発揮できそうな場面</h2>
+          <ol
+            v-if="filledScenes.length"
+            class="report__scene-list"
+          >
+            <li v-for="(s, i) in filledScenes" :key="i">{{ s }}</li>
+          </ol>
+          <p v-else class="muted small">（未入力）</p>
+        </section>
+
+        <!-- ============ Step 7（1 週間ワーク） ============ -->
+        <section v-if="hasStep7" class="report__section">
+          <h2>1 週間の振り返り（Day 1〜7）</h2>
+          <table class="report__table report__weekly">
+            <thead>
+              <tr>
+                <th style="width: 44px">Day</th>
+                <th style="width: 56px">日付</th>
+                <th>Q1：今日できた</th>
+                <th>Q2：明日以降できそう</th>
+                <th>Q3：明日の目標</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in sortedRecords" :key="`d-${r.dayNumber}`">
+                <td><strong>Day {{ r.dayNumber }}</strong></td>
+                <td>{{ fmtMd(r.targetDate) }}</td>
+                <td style="white-space: pre-wrap">
+                  {{ r.q1NoneFlag ? "（特になし）" : r.q1TodayAchieved || "—" }}
+                </td>
+                <td style="white-space: pre-wrap">
+                  {{ r.q2FuturePossible || "—" }}
+                </td>
+                <td style="white-space: pre-wrap">
+                  {{ r.q3TomorrowGoal || "—" }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ============ Step 8（振り返りワーク） ============ -->
+        <section v-if="hasStep8" class="report__section">
+          <h2>振り返りワーク</h2>
+
+          <h3>Q1．{{ CONTENT.step8.q1Label }}</h3>
+          <p class="report__answer">
+            {{ data.step8?.q1CommonPatterns || "（未入力）" }}
+          </p>
+
+          <h3>Q2．{{ CONTENT.step8.q3Label }}</h3>
+          <p class="report__answer">
+            {{ data.step8?.q3CurrentEnvPossibilities || "（未入力）" }}
+          </p>
+
+          <h3>Q3．{{ CONTENT.step8.q4Label }}</h3>
+          <p class="report__answer">
+            {{ data.step8?.q4EnvironmentDesign || "（未入力）" }}
+          </p>
+
+          <h3>Q4．{{ CONTENT.step8.q5Label }}</h3>
+          <p class="report__answer">
+            {{ data.step8?.q5NoneFlag
+              ? "（特になし）"
+              : (data.step8?.q5NewOpportunities || "（未入力）") }}
+          </p>
+        </section>
+
         <footer class="report__footer">
           <p class="tiny muted">
             {{ CONTENT.app.name }} — このシートは回答結果の確認・印刷用です。
@@ -445,6 +557,22 @@ const print = () => {
 .report__axis {
   page-break-inside: avoid;
   margin: 6px 0;
+}
+
+.report__scene-list {
+  margin: 4px 0;
+  padding-left: 24px;
+  font-size: 13px;
+}
+.report__scene-list li {
+  margin: 2px 0;
+}
+
+.report__weekly {
+  font-size: 11px;
+}
+.report__weekly td {
+  vertical-align: top;
 }
 
 .report__footer {
