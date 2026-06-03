@@ -4,6 +4,10 @@
 //   /admin/* と / は admin ログイン必須（admin 以外は /login へ）。
 // ============================================================
 export default defineNuxtRouteMiddleware(async (to) => {
+  // API ルートはサーバー側で処理されるためミドルウェアでは触らない。
+  // （Nitro エンドポイントが 404 でフォールバックした際の /login 強制遷移を防ぐ）
+  if (to.path.startsWith("/api/")) return;
+
   // 回答者向け公開ルート
   if (to.path.startsWith("/assessment/")) return;
   // 1 週間ワーク・振り返りワーク（クッキーで参加者識別）も公開
