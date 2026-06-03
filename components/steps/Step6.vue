@@ -96,7 +96,22 @@ const copyDailyUrl = async () => {
 
     <!-- ============ subStep 0: シーン入力 ============ -->
     <template v-if="subStep === 0">
-      <p v-for="(line, i) in CONTENT.step6.intro" :key="i" class="muted">
+      <!-- Step 4 で書いた「あなたは何を大切にしている人間なのか」を上部に再掲 -->
+      <div class="card card--soft" style="margin-top: 8px; border-left: 4px solid var(--accent)">
+        <p class="small muted" style="margin: 0">
+          Step 4 で書いた「{{ CONTENT.block6.coreLabel }}」
+        </p>
+        <p style="margin: 6px 0 0; font-size: 16px">
+          <strong>{{ state.coreStatement || "（未入力）" }}</strong>
+        </p>
+      </div>
+
+      <p
+        v-for="(line, i) in CONTENT.step6.intro"
+        :key="i"
+        class="muted"
+        style="margin-top: 16px"
+      >
         {{ line }}
       </p>
 
