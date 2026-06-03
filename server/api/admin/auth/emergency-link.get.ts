@@ -67,11 +67,20 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  // PKCE フロー有効なプロジェクトでは action_link 単独では機能しない（ブラウザ
+  // に code_verifier が無いため）。代わりに email_otp を使う緊急ログインページ
+  // への URL を組み立てて返す。これは verifyOtp() を呼ぶだけなので PKCE 非依存。
+  const otp = data?.properties?.email_otp ?? null;
+  const emergencyLoginUrl = otp
+    ? `${reqUrl.origin}/emergency-login?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`
+    : null;
+
   return {
-    note: "下記 action_link を別タブで開くとログインできます。1 回限り有効。",
+    note: "★ emergency_login_url を別タブで開いてください。PKCE フロー有効なプロジェクトでは action_link は使えません。",
     email,
     redirect_to: redirectTo,
+    emergency_login_url: emergencyLoginUrl,
     action_link: data?.properties?.action_link ?? null,
-    email_otp: data?.properties?.email_otp ?? null,
+    email_otp: otp,
   };
 });

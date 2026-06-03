@@ -11,7 +11,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (to.path === "/review" || to.path.startsWith("/review/")) return;
 
   // 認証関連の公開ルート
-  const publicPaths = ["/login", "/confirm"];
+  const publicPaths = ["/login", "/confirm", "/emergency-login"];
   if (publicPaths.includes(to.path)) return;
 
   const user = useSupabaseUser();
