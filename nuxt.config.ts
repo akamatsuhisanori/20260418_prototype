@@ -19,6 +19,7 @@ export default defineNuxtConfig({
       exclude: [
         "/login",
         "/confirm",
+        "/emergency-login",
         "/assessment/*",
         "/assessment/**",
         "/daily",

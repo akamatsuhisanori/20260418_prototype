@@ -66,6 +66,17 @@ const dailyOrigin = computed(() => {
   if (typeof window === "undefined") return "";
   return window.location.origin;
 });
+
+// 印刷用レポート（Step 1〜6 のお土産シート）
+const route = useRoute();
+const tokenParam = computed(() =>
+  Array.isArray(route.params.token)
+    ? route.params.token[0]
+    : (route.params.token as string),
+);
+const reportPath = computed(
+  () => `/assessment/${encodeURIComponent(tokenParam.value)}/report`,
+);
 const dailyFullUrl = computed(() => `${dailyOrigin.value}/daily`);
 
 const copyDailyUrl = async () => {
@@ -85,7 +96,22 @@ const copyDailyUrl = async () => {
 
     <!-- ============ subStep 0: シーン入力 ============ -->
     <template v-if="subStep === 0">
-      <p v-for="(line, i) in CONTENT.step6.intro" :key="i" class="muted">
+      <!-- Step 4 で書いた「あなたは何を大切にしている人間なのか」を上部に再掲 -->
+      <div class="card card--soft" style="margin-top: 8px; border-left: 4px solid var(--accent)">
+        <p class="small muted" style="margin: 0">
+          Step 4 で書いた「{{ CONTENT.block6.coreLabel }}」
+        </p>
+        <p style="margin: 6px 0 0; font-size: 16px">
+          <strong>{{ state.coreStatement || "（未入力）" }}</strong>
+        </p>
+      </div>
+
+      <p
+        v-for="(line, i) in CONTENT.step6.intro"
+        :key="i"
+        class="muted"
+        style="margin-top: 16px"
+      >
         {{ line }}
       </p>
 
@@ -163,6 +189,20 @@ const copyDailyUrl = async () => {
       <p class="small muted" style="margin-top: 12px">
         {{ CONTENT.step6.bridgeBookmarkNote }}
       </p>
+
+      <!-- ここまでの回答結果を A4 縦の印刷用レポートで確認 -->
+      <div class="card card--soft" style="margin-top: 16px">
+        <p style="margin: 0">
+          <strong>🎁 ここまでの回答をお土産にどうぞ</strong>
+        </p>
+        <p class="small muted" style="margin: 4px 0 8px">
+          Step 1〜6 の内容を A4 縦 1 ページの印刷用レイアウトで表示できます。
+          PDF として保存もできます。
+        </p>
+        <NuxtLink :to="reportPath" target="_blank" class="btn small">
+          🖨️ 回答結果を印刷用に表示
+        </NuxtLink>
+      </div>
 
       <div class="btn-row">
         <button type="button" class="btn btn--ghost" @click="subStep = 0">

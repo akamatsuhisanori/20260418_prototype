@@ -168,18 +168,22 @@ const interpretation = computed(() => {
 // =================================================
 // subStep 3：重要組織の確定
 // =================================================
+// 自動選定は「過去組織のうち 6 項目の平均点が最も高い組織」を最優先で提案する。
+// 過去組織が無い場合のみ現在組織の最高点に倒す。
 const autoSelected = computed(
   () => topPast.value ?? topCurrent.value ?? null,
 );
 
 watch(subStep, (v) => {
-  // 確定画面に入った時、未選定なら自動選定を反映
-  if (v === 3 && state.value.selectedOrgId == null && autoSelected.value) {
-    mutate((s) => {
-      s.selectedOrgId = autoSelected.value!.id;
-      s.selectedOrgManual = false;
-    });
-  }
+  if (v !== 3) return;
+  // 手動選択済みなら尊重する。それ以外は最新のスコアに基づいて再提案する。
+  if (state.value.selectedOrgManual) return;
+  if (!autoSelected.value) return;
+  if (state.value.selectedOrgId === autoSelected.value.id) return;
+  mutate((s) => {
+    s.selectedOrgId = autoSelected.value!.id;
+    s.selectedOrgManual = false;
+  });
 });
 
 const selectedOrg = computed(() =>
