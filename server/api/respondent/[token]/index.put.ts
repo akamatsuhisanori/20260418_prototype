@@ -1,7 +1,9 @@
 // ============================================================
 // PUT /api/respondent/[token]
 //   回答途中の state を debounce で保存する。
-//   - is_revoked / is_submitted の場合は 403 で拒否
+//   - is_revoked の場合は 404
+//   - is_submitted の場合は step7（1週間ワーク記録）だけマージして保存し、
+//     他フィールドは破棄。これにより /review 提出後でも過去日の追記が可能。
 // ============================================================
 import { getSupabaseAdmin } from "~/server/utils/supabase-admin";
 import type { AssessmentState } from "~/types/database.types";
@@ -19,7 +21,7 @@ export default defineEventHandler(async (event) => {
   const admin = getSupabaseAdmin();
   const { data: row, error: lookupErr } = await admin
     .from("responses")
-    .select("id, is_revoked, is_submitted")
+    .select("id, is_revoked, is_submitted, data")
     .eq("access_token", token)
     .maybeSingle();
   if (lookupErr) {
@@ -28,16 +30,27 @@ export default defineEventHandler(async (event) => {
   if (!row || row.is_revoked) {
     throw createError({ statusCode: 404, statusMessage: "not found" });
   }
+
+  // 提出後は step7（1週間ワーク）だけ受け付け、他は既存値を維持する。
+  // これにより参加者は /daily からいつでも過去日の追記・修正ができる。
+  let nextData: AssessmentState;
   if (row.is_submitted) {
-    throw createError({ statusCode: 403, statusMessage: "already submitted" });
+    const existing =
+      (row.data as Partial<AssessmentState> | null) ?? ({} as Partial<AssessmentState>);
+    nextData = {
+      ...(existing as AssessmentState),
+      step7: body.data.step7 ?? (existing as AssessmentState).step7,
+    };
+  } else {
+    nextData = body.data;
   }
 
   const { error } = await admin
     .from("responses")
-    .update({ data: body.data })
+    .update({ data: nextData })
     .eq("id", row.id);
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message });
   }
-  return { ok: true };
+  return { ok: true, scope: row.is_submitted ? "step7-only" : "full" };
 });

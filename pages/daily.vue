@@ -92,7 +92,10 @@ onMounted(() => {
     // 完了当日（プレビュー）：Day 1 をデフォルト編集対象に
     editingDay.value = 1;
   } else {
-    editingDay.value = null; // 完了済み（/review 導線へ）
+    // Day 8 以降（1 週間経過後）：未記入の最初の Day、なければ Day 7
+    // 過去日も含めていつでも編集できる（/review 提出後も同様）。
+    const firstEmpty = allDays.value.find((d) => !recordOf(d.dayNumber));
+    editingDay.value = firstEmpty?.dayNumber ?? 7;
   }
 });
 
@@ -178,7 +181,7 @@ const submitRecord = async () => {
   submitting.value = true;
   await flush(); // debounce を待たず即時保存
   submitting.value = false;
-  alert("今日の記録を送信しました。");
+  alert(`Day ${editingDay.value} の記録を送信しました。`);
 };
 
 // 表で行をクリックしたとき
@@ -260,19 +263,6 @@ const dayState = (dayNumber: number): "answered" | "current" | "empty" => {
       </AppCard>
     </template>
 
-    <!-- ============ 全工程完了済み（/review submit 後） ============ -->
-    <template v-else-if="submitted">
-      <AppCard>
-        <h2 class="center">🎉 すべてのワークが完了しました</h2>
-        <p class="center" style="margin-top: 12px">
-          1 週間ワーク・振り返りワークまですべて完了しています。
-        </p>
-        <div class="btn-row" style="justify-content: center; margin-top: 24px">
-          <NuxtLink to="/review" class="btn">振り返りワークを開く</NuxtLink>
-        </div>
-      </AppCard>
-    </template>
-
     <!-- ============ Step 6 未完了 ============ -->
     <template v-else-if="!step6Date">
       <AppCard>
@@ -281,24 +271,26 @@ const dayState = (dayNumber: number): "answered" | "current" | "empty" => {
       </AppCard>
     </template>
 
-    <!-- ============ Day 7 終了済 ============ -->
-    <template v-else-if="isWorkComplete">
-      <AppCard>
-        <h2>{{ CONTENT.step7.allDoneTitle }}</h2>
-        <p>{{ CONTENT.step7.allDoneBody }}</p>
-        <div class="btn-row">
-          <span />
-          <div class="btn-right">
-            <NuxtLink to="/review" class="btn btn--primary">
-              {{ CONTENT.step7.reviewButtonLabel }}
-            </NuxtLink>
-          </div>
-        </div>
-      </AppCard>
-    </template>
-
-    <!-- ============ Day 1〜7 メイン画面 ============ -->
+    <!--
+      ============ Day 1〜7 メイン画面 ============
+      新仕様：1 週間経過後・/review 提出後も、過去日の追記・編集を可能にする。
+      旧 v-else-if="isWorkComplete" / v-else-if="submitted" のゲートは
+      バナー（status-banner）に置き換え、フォームは常に表示する。
+    -->
     <template v-else>
+      <!-- ステータスバナー：1週間経過後・提出済みの場合に表示（フォームは出し続ける） -->
+      <div v-if="isWorkComplete || submitted" class="status-banner">
+        <p v-if="submitted">
+          ✓ 振り返りワークまで提出済みです。1週間ワークの記録は引き続き追記・編集できます。
+        </p>
+        <p v-else>
+          1週間が経過しました。過去日の記録は引き続き追記・編集できます。
+        </p>
+        <NuxtLink to="/review" class="btn small">
+          振り返りワークを{{ submitted ? "見る" : "開く" }}
+        </NuxtLink>
+      </div>
+
       <!-- Day 進捗バー -->
       <div class="day-progress">
         <div
@@ -501,4 +493,20 @@ const dayState = (dayNumber: number): "answered" | "current" | "empty" => {
 }
 .records-table__row--current { background: #ecfdf5; }
 .records-table__row--editing { box-shadow: inset 3px 0 0 var(--accent); }
+
+.status-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.status-banner p { margin: 0; flex: 1; min-width: 220px; }
+.status-banner .btn { white-space: nowrap; }
 </style>

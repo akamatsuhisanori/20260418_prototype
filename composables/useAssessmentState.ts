@@ -197,7 +197,8 @@ export const useAssessmentState = () => {
   // ---------------------------------------------------------
   let timer: ReturnType<typeof setTimeout> | null = null;
   const save = () => {
-    if (submitted.value) return;
+    // submitted でもサーバー側で step7 のみマージして保存する
+    // （/daily から過去日の追記が可能）。
     if (notFound.value) return;
     if (!tokenState.value) return;
     if (timer) clearTimeout(timer);
@@ -223,7 +224,8 @@ export const useAssessmentState = () => {
       clearTimeout(timer);
       timer = null;
     }
-    if (submitted.value || notFound.value || !tokenState.value) return;
+    // submitted でもサーバー側で step7 のみマージして保存する。
+    if (notFound.value || !tokenState.value) return;
     saving.value = true;
     state.value.meta.updatedAt = new Date().toISOString();
     try {
